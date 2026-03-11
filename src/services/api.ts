@@ -1,14 +1,4 @@
-import { ShelbyClient } from '@shelby-protocol/sdk/browser';
-
-// Global declaration for the Petra Wallet extension
-declare global {
-  interface Window {
-    aptos?: any;
-  }
-}
-
-// Initialize the client for the Shelbynet testnet
-const shelby = new ShelbyClient({ network: 'testnet' });
+import { ShelbyClient } from "@shelby-protocol/sdk/browser";
 
 export interface UploadDatasetPayload {
   datasetTitle: string;
@@ -68,34 +58,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export async function uploadDataset(
   payload: UploadDatasetPayload,
 ): Promise<UploadDatasetResponse> {
-  if (!payload.file) {
-    throw new Error("A file is required for upload.");
+  const formData = new FormData();
+  formData.append("datasetTitle", payload.datasetTitle);
+  formData.append("facultyDiscipline", payload.facultyDiscipline);
+  formData.append("primaryResearcher", payload.primaryResearcher);
+
+  if (payload.file) {
+    formData.append("file", payload.file);
   }
 
-  const wallet = window.aptos;
-  if (!wallet) {
-    throw new Error("Petra wallet extension is not installed.");
-  }
-  
-  const { address } = await wallet.connect();
-
-  const uploadResult = await shelby.upload({
-    file: payload.file,
-    metadata: {
-      title: payload.datasetTitle,
-      faculty: payload.facultyDiscipline,
-      researcher: payload.primaryResearcher
-    },
-    owner: address,
-    provenanceEnabled: true 
+  const response = await fetch(`${API_BASE_URL}/datasets/upload`, {
+    method: "POST",
+    body: formData,
   });
 
-  // Optional: You can add a fetch() call here to POST the uploadResult.transactionHash 
-  // to your backend database so it appears in the CitationLedgerRecord.
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Upload failed with status ${response.status}`);
+  }
 
-  return {
-    transactionHash: uploadResult.transactionHash
-  };
+  return response.json() as Promise<UploadDatasetResponse>;
 }
 
 export function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {

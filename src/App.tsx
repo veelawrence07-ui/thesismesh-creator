@@ -19,10 +19,11 @@ const App = () => (
       <WalletProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/upload-data" element={<UploadData />} />
               <Route path="/citation-ledger" element={<CitationLedger />} />
               <Route path="/ai-audit" element={<AIAudit />} />

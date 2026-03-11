@@ -37,24 +37,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     setIsWalletAvailable(Boolean(wallet));
 
-    if (!wallet) {
+    if (!wallet?.account) {
       return;
     }
 
     const initializeWallet = async () => {
       try {
-        const connected = (await wallet.isConnected?.()) ?? false;
-
-        if (!connected) {
-          return;
-        }
-
-        const account = await wallet.account?.();
+        // If the wallet has already been authorized, Petra returns the active account here.
+        const account = await wallet.account();
 
         if (account?.address) {
           setWalletAddress(account.address);
           setIsConnected(true);
+          return;
         }
+
+        setWalletAddress(null);
+        setIsConnected(false);
       } catch {
         setWalletAddress(null);
         setIsConnected(false);

@@ -1,0 +1,11 @@
+[package]
+name = "ThesisMeshRegistry"
+version = "1.0.0"
+
+[addresses]
+thesis_mesh = "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-core.git"
+rev = "testnet"
+subdir = "aptos-move/framework/aptos-framework"

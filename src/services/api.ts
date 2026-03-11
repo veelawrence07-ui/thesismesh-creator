@@ -1,12 +1,15 @@
-import { ShelbyClient } from "@shelby-protocol/sdk/browser";
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 
-const aptosConfig = new AptosConfig({ network: Network.TESTNET });
+const aptosConfig = new AptosConfig({
+  network: Network.CUSTOM,
+  fullnode: "https://api.shelbynet.shelby.xyz/v1",
+  indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
+});
 
 export const aptos = new Aptos(aptosConfig);
 export const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
-const APTOS_TESTNET_INDEXER_URL = "https://api.testnet.aptoslabs.com/v1/graphql";
+const SHELBYNET_INDEXER_URL = "https://api.shelbynet.shelby.xyz/v1/graphql";
 
 const GET_DATASET_EVENTS_QUERY = `
 query GetDatasetEvents($contractAddress: String!) {
@@ -37,7 +40,7 @@ interface DatasetEventData {
 
 interface DatasetEvent {
   transaction_version: number | string;
-  data: DatasetEventData;
+  data: DatasetEventData | string;
 }
 
 interface GetDatasetEventsResponse {
@@ -134,14 +137,26 @@ function formatMicrosecondsToDate(uploadTime: string | number): string {
   const timestamp = Number(uploadTime);
 
   if (!Number.isFinite(timestamp)) {
-    return new Date(0).toISOString();
+    return "Unknown date";
   }
 
-  return new Date(Math.floor(timestamp / 1000)).toISOString();
+  return new Date(Math.floor(timestamp / 1000)).toLocaleString();
+}
+
+function parseEventData(data: DatasetEvent["data"]): DatasetEventData | null {
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data) as DatasetEventData;
+    } catch {
+      return null;
+    }
+  }
+
+  return data;
 }
 
 async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
-  const response = await fetch(APTOS_TESTNET_INDEXER_URL, {
+  const response = await fetch(SHELBYNET_INDEXER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -169,14 +184,24 @@ async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
 }
 
 function mapEventsToRecords(events: DatasetEvent[]): CitationLedgerRecord[] {
-  return events.map((event) => ({
-    id: String(event.transaction_version),
-    datasetTitle: event.data.title,
-    dateUploaded: formatMicrosecondsToDate(event.data.upload_time),
-    faculty: event.data.faculty,
-    researcher: event.data.researcher,
-    cryptographicReceipt: event.data.shelby_hash,
-  }));
+  return events
+    .map((event) => {
+      const data = parseEventData(event.data);
+
+      if (!data) {
+        return null;
+      }
+
+      return {
+        id: String(event.transaction_version),
+        datasetTitle: data.title,
+        dateUploaded: formatMicrosecondsToDate(data.upload_time),
+        faculty: data.faculty,
+        researcher: data.researcher,
+        cryptographicReceipt: data.shelby_hash,
+      };
+    })
+    .filter((record): record is CitationLedgerRecord => record !== null);
 }
 
 export async function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {

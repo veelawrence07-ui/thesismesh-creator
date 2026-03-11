@@ -70,7 +70,20 @@ export default function UploadData() {
       setFile(null);
     } catch (err) {
       setSubmitStep(null);
-      setError(err instanceof Error ? err.message : "An unknown error occurred during upload.");
+
+      if (err instanceof Error) {
+        const message = err.message.toLowerCase();
+
+        if (message.includes("user rejected") || message.includes("rejected")) {
+          setError("Transaction rejected in Petra wallet. Please approve the signature to complete logging.");
+          return;
+        }
+
+        setError(err.message);
+        return;
+      }
+
+      setError("An unknown error occurred during upload.");
     }
   };
 
@@ -130,7 +143,7 @@ export default function UploadData() {
           disabled={uploadMutation.isPending || submitStep === "awaitingWallet"}
         >
           {submitStep === "uploading"
-            ? "Uploading to Shelby Vault..."
+            ? "Uploading to Shelby..."
             : submitStep === "awaitingWallet"
               ? "Awaiting Wallet Signature..."
               : "Upload to Shelby Network"}
@@ -148,7 +161,7 @@ export default function UploadData() {
         <Alert className="border-indigo-300 bg-indigo-50">
           <AlertTitle className="text-indigo-800">Upload successful</AlertTitle>
           <AlertDescription className="text-indigo-700">
-            Metadata confirmed on Aptos testnet: <span className="font-mono text-xs">{aptosTxHash}</span>
+            Metadata confirmed on Shelbynet: <span className="font-mono text-xs">{aptosTxHash}</span>
           </AlertDescription>
         </Alert>
       )}

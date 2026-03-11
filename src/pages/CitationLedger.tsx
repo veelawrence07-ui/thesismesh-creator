@@ -51,7 +51,7 @@ export default function CitationLedger() {
               {(data ?? []).map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>{record.datasetTitle}</TableCell>
-                  <TableCell>{new Date(record.dateUploaded).toLocaleDateString()}</TableCell>
+                  <TableCell>{record.dateUploaded}</TableCell>
                   <TableCell>{record.faculty}</TableCell>
                   <TableCell>{record.researcher}</TableCell>
                   <TableCell>

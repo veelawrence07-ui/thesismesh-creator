@@ -65,7 +65,7 @@ export default function Dashboard() {
                       </Badge>
                     </div>
                     <p className="text-sm text-slate-600">
-                      {item.researcher} · {item.faculty} · {new Date(item.dateUploaded).toLocaleString()}
+                      {item.researcher} · {item.faculty} · {item.dateUploaded}
                     </p>
                   </li>
                 ))}

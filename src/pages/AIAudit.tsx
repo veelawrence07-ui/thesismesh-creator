@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,8 +19,15 @@ const initialMessage: ChatMessage = {
 export default function AIAudit() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const auditMutation = useAuditVerification();
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, auditMutation.isPending]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,15 +36,20 @@ export default function AIAudit() {
       return;
     }
 
-    const userMessage: ChatMessage = { role: "user", content: input.trim() };
-    setMessages((current) => [...current, userMessage]);
-
     const pendingInput = input.trim();
     setInput("");
 
-    const response = await auditMutation.mutateAsync(pendingInput);
-    const assistantMessage: ChatMessage = { role: "assistant", content: response.message };
-    setMessages((current) => [...current, assistantMessage]);
+    setMessages((current) => [...current, { role: "user", content: pendingInput }]);
+
+    try {
+      const response = await auditMutation.mutateAsync(pendingInput);
+      setMessages((current) => [...current, { role: "assistant", content: response.message }]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: "Error: Verification failed. The network is unreachable or the hash is invalid." }
+      ]);
+    }
   };
 
   return (
@@ -64,6 +76,14 @@ export default function AIAudit() {
                 {message.content}
               </div>
             ))}
+            
+            {auditMutation.isPending && (
+              <div className="max-w-[85%] rounded-md px-3 py-2 text-sm bg-slate-100 text-slate-500 animate-pulse">
+                Querying Aptos ledger...
+              </div>
+            )}
+            
+            <div ref={scrollRef} />
           </div>
         </ScrollArea>
 
@@ -73,6 +93,7 @@ export default function AIAudit() {
             onChange={(event) => setInput(event.target.value)}
             placeholder="Paste citation hash"
             className="flex-1"
+            disabled={auditMutation.isPending}
           />
           <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={auditMutation.isPending}>
             Send

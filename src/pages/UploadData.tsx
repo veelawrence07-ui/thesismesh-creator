@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatasetUpload } from "@/hooks/useThesisMeshData";
+import { submitDatasetToContract } from "@/services/api";
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
   const [datasetTitle, setDatasetTitle] = useState("");
   const [facultyDiscipline, setFacultyDiscipline] = useState("");
-  // Initialize as an empty string
   const [primaryResearcher, setPrimaryResearcher] = useState("");
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const [shelbyTxHash, setShelbyTxHash] = useState<string | null>(null);
+  const [aptosTxHash, setAptosTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
   const uploadMutation = useDatasetUpload();
 
@@ -29,11 +31,14 @@ export default function UploadData() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setTxHash(null);
+    setShelbyTxHash(null);
+    setAptosTxHash(null);
     setError(null);
+    setSubmitStep("uploading");
 
     if (!file) {
       setError("Please select or drop a dataset file before uploading.");
+      setSubmitStep(null);
       return;
     }
 
@@ -44,14 +49,27 @@ export default function UploadData() {
         primaryResearcher,
         file,
       });
-      setTxHash(response.transactionHash);
-      
+
+      setShelbyTxHash(response.transactionHash);
+      setSubmitStep("awaitingWallet");
+
+      const receipt = await submitDatasetToContract(
+        datasetTitle,
+        facultyDiscipline,
+        primaryResearcher,
+        response.transactionHash,
+      );
+
+      setAptosTxHash(receipt.hash);
+      setSubmitStep(null);
+
       // Clear form on success
       setDatasetTitle("");
       setFacultyDiscipline("");
       setPrimaryResearcher("");
       setFile(null);
     } catch (err) {
+      setSubmitStep(null);
       setError(err instanceof Error ? err.message : "An unknown error occurred during upload.");
     }
   };
@@ -106,8 +124,16 @@ export default function UploadData() {
           />
         </div>
 
-        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={uploadMutation.isPending}>
-          {uploadMutation.isPending ? "Connecting to Petra Wallet..." : "Upload to Shelby Network"}
+        <Button
+          type="submit"
+          className="bg-indigo-600 hover:bg-indigo-700"
+          disabled={uploadMutation.isPending || submitStep === "awaitingWallet"}
+        >
+          {submitStep === "uploading"
+            ? "Uploading to Shelby Vault..."
+            : submitStep === "awaitingWallet"
+              ? "Awaiting Wallet Signature..."
+              : "Upload to Shelby Network"}
         </Button>
       </form>
 
@@ -118,11 +144,11 @@ export default function UploadData() {
         </Alert>
       )}
 
-      {txHash && (
+      {shelbyTxHash && aptosTxHash && (
         <Alert className="border-indigo-300 bg-indigo-50">
           <AlertTitle className="text-indigo-800">Upload successful</AlertTitle>
           <AlertDescription className="text-indigo-700">
-            Aptos transaction hash: <span className="font-mono text-xs">{txHash}</span>
+            Metadata confirmed on Aptos testnet: <span className="font-mono text-xs">{aptosTxHash}</span>
           </AlertDescription>
         </Alert>
       )}

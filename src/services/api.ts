@@ -1,4 +1,11 @@
 import { ShelbyClient } from "@shelby-protocol/sdk/browser";
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+
+const aptosConfig = new AptosConfig({ network: Network.TESTNET });
+
+export const aptos = new Aptos(aptosConfig);
+export const CONTRACT_ADDRESS =
+  "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
 
 export interface UploadDatasetPayload {
   datasetTitle: string;
@@ -97,4 +104,38 @@ export function verifyCitationHash(hash: string): Promise<AuditMessageResponse> 
     method: "POST",
     body: JSON.stringify({ hash }),
   });
+}
+
+export async function submitDatasetToContract(
+  title: string,
+  faculty: string,
+  researcher: string,
+  shelbyHash: string,
+) {
+  const wallet = (window as Window & {
+    aptos?: {
+      signAndSubmitTransaction: (transaction: {
+        data: {
+          function: string;
+          functionArguments: string[];
+        };
+      }) => Promise<{ hash: string }>;
+    };
+  }).aptos;
+
+  if (!wallet) {
+    throw new Error("Petra wallet is not installed.");
+  }
+
+  const transaction = {
+    data: {
+      function: `${CONTRACT_ADDRESS}::registry::log_dataset`,
+      functionArguments: [title, faculty, researcher, shelbyHash],
+    },
+  };
+
+  const response = await wallet.signAndSubmitTransaction(transaction);
+  const receipt = await aptos.waitForTransaction({ transactionHash: response.hash });
+
+  return receipt;
 }

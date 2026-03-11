@@ -1,6 +1,9 @@
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWallet } from "@/contexts/WalletContext";
 import { useDashboardMetrics, useRecentActivity } from "@/hooks/useThesisMeshData";
 
 function truncateHash(hash: string): string {
@@ -12,8 +15,25 @@ function truncateHash(hash: string): string {
 }
 
 export default function Dashboard() {
+  const [viewMode, setViewMode] = useState<"global" | "mine">("global");
+  const { walletAddress } = useWallet();
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: activity, isLoading: loadingActivity } = useRecentActivity();
+
+  const visibleActivity = useMemo(() => {
+    const records = activity ?? [];
+
+    if (viewMode !== "mine" || !walletAddress) {
+      return records;
+    }
+
+    const storageKey = "thesismesh-wallet-uploads";
+    const saved = window.localStorage.getItem(storageKey);
+    const parsed = saved ? (JSON.parse(saved) as Record<string, string[]>) : {};
+    const mine = new Set(parsed[walletAddress] ?? []);
+
+    return records.filter((record) => mine.has(record.cryptographicReceipt));
+  }, [activity, viewMode, walletAddress]);
 
   return (
     <div className="space-y-8">
@@ -39,8 +59,24 @@ export default function Dashboard() {
 
       <section>
         <Card className="border-slate-300">
-          <CardHeader>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg text-slate-900">Recent Activity</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "global" ? "default" : "outline"}
+                className={viewMode === "global" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+                onClick={() => setViewMode("global")}
+              >
+                Global Registry
+              </Button>
+              <Button
+                variant={viewMode === "mine" ? "default" : "outline"}
+                className={viewMode === "mine" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+                onClick={() => setViewMode("mine")}
+              >
+                My Uploads
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {loadingActivity ? (
@@ -49,9 +85,15 @@ export default function Dashboard() {
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
+            ) : visibleActivity.length === 0 ? (
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                {viewMode === "mine"
+                  ? "No uploads are linked to this connected wallet yet."
+                  : "No activity has been indexed yet."}
+              </div>
             ) : (
               <ul className="space-y-3">
-                {(activity ?? []).map((item) => (
+                {visibleActivity.map((item) => (
                   <li key={item.id} className="rounded-md border border-slate-200 p-3">
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-medium text-slate-900">{item.datasetTitle}</p>

@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig, InputTransactionData, Network } from "@aptos-labs/ts-sdk";
 
 const aptosConfig = new AptosConfig({
   network: Network.CUSTOM,
@@ -245,30 +245,16 @@ export async function submitDatasetToContract(
   faculty: string,
   researcher: string,
   shelbyHash: string,
+  signAndSubmitTransaction: (transaction: InputTransactionData) => Promise<{ hash: string }>,
 ) {
-  const wallet = (window as Window & {
-    aptos?: {
-      signAndSubmitTransaction: (transaction: {
-        data: {
-          function: string;
-          functionArguments: string[];
-        };
-      }) => Promise<{ hash: string }>;
-    };
-  }).aptos;
-
-  if (!wallet) {
-    throw new Error("Petra wallet is not installed.");
-  }
-
-  const transaction = {
+  const transaction: InputTransactionData = {
     data: {
       function: `${CONTRACT_ADDRESS}::registry::log_dataset`,
       functionArguments: [title, faculty, researcher, shelbyHash],
     },
   };
 
-  const response = await wallet.signAndSubmitTransaction(transaction);
+  const response = await signAndSubmitTransaction(transaction);
   const receipt = await aptos.waitForTransaction({ transactionHash: response.hash });
 
   return receipt;

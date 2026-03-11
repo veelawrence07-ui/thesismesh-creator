@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { Wallet } from "lucide-react";
+import { WalletSelector } from "@aptos-labs/wallet-adapter-ant-design";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { shortenWalletAddress, useWallet } from "@/contexts/WalletContext";
 
 const navigationItems = [
   { to: "/", label: "Dashboard", end: true },
@@ -12,29 +10,18 @@ const navigationItems = [
   { to: "/ai-audit", label: "AI Audit" },
 ];
 
+function shortenWalletAddress(address: string): string {
+  if (address.length <= 12) {
+    return address;
+  }
+
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export default function AppLayout() {
-  const [walletError, setWalletError] = useState<string | null>(null);
-  const { walletAddress, isConnected, isWalletAvailable, isConnecting, connectWallet, disconnectWallet } = useWallet();
-
-  const handleConnectWallet = async () => {
-    setWalletError(null);
-
-    try {
-      await connectWallet();
-    } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Unable to connect Petra wallet.");
-    }
-  };
-
-  const handleDisconnectWallet = async () => {
-    setWalletError(null);
-
-    try {
-      await disconnectWallet();
-    } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Unable to disconnect Petra wallet.");
-    }
-  };
+  const { account, connected, wallet, wallets } = useWallet();
+  const walletAddress = account?.address?.toString() ?? null;
+  const isLoadingWallet = wallets.length === 0;
 
   return (
     <div className="min-h-screen bg-white">
@@ -70,56 +57,32 @@ export default function AppLayout() {
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Shelbynet / Aptos</p>
               <p className="text-sm text-slate-700">Connect Petra wallet to sign and log on-chain research actions.</p>
-              {!isWalletAvailable && (
-                <p className="mt-1 text-xs text-red-600">Petra wallet not detected. Install extension to continue.</p>
-              )}
-              {walletError && <p className="mt-1 text-xs text-red-600">{walletError}</p>}
+              {isLoadingWallet && <p className="mt-1 text-xs text-slate-500">Detecting wallet extension...</p>}
+              {!isLoadingWallet && !wallet && <p className="mt-1 text-xs text-red-600">No Aptos wallet extension detected.</p>}
             </div>
 
             <div className="flex items-center gap-2">
-              {!isConnected ? (
-                <Button
-                  onClick={handleConnectWallet}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                  disabled={!isWalletAvailable || isConnecting}
-                >
-                  <Wallet className="mr-2 h-4 w-4" />
-                  {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2 rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1">
-                  <span className="font-mono text-sm text-indigo-800">
-                    {walletAddress ? shortenWalletAddress(walletAddress) : "Connected"}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    className="h-auto p-0 text-xs text-indigo-700 hover:bg-transparent hover:text-indigo-900"
-                    onClick={handleDisconnectWallet}
-                  >
-                    Disconnect
-                  </Button>
+              {connected && walletAddress && (
+                <div className="rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 font-mono text-sm text-indigo-800">
+                  {shortenWalletAddress(walletAddress)}
                 </div>
               )}
+              <WalletSelector />
             </div>
           </header>
 
           <div className="relative">
             <Outlet />
-            {!isConnected && (
+            {!connected && (
               <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm">
                 <div className="max-w-md rounded-lg border border-indigo-200 bg-white p-6 text-center shadow">
                   <h2 className="text-lg font-semibold text-slate-900">Wallet Connection Required</h2>
                   <p className="mt-2 text-sm text-slate-600">
                     Connect your Petra wallet to access Dashboard views, upload datasets, and interact with the global registry.
                   </p>
-                  <Button
-                    onClick={handleConnectWallet}
-                    className="mt-4 bg-indigo-600 hover:bg-indigo-700"
-                    disabled={!isWalletAvailable || isConnecting}
-                  >
-                    <Wallet className="mr-2 h-4 w-4" />
-                    {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
-                  </Button>
+                  <div className="mt-4 flex justify-center">
+                    <WalletSelector />
+                  </div>
                 </div>
               </div>
             )}

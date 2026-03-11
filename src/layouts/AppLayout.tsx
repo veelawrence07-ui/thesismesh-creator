@@ -8,7 +8,11 @@ const navigationItems = [
   { to: "/ai-audit", label: "AI Audit" },
 ];
 
-export default function AppLayout() {
+interface AppLayoutProps {
+  walletAddress: string | null;
+}
+
+export default function AppLayout({ walletAddress }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto flex min-h-screen max-w-7xl">
@@ -16,6 +20,9 @@ export default function AppLayout() {
           <div className="mb-8">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">ThesisMesh</p>
             <h1 className="mt-2 text-2xl font-semibold text-slate-900">Research Dashboard</h1>
+            <p className="mt-3 break-all text-xs text-slate-500">
+              Wallet: {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "Not connected"}
+            </p>
           </div>
           <nav className="space-y-2">
             {navigationItems.map((item) => (

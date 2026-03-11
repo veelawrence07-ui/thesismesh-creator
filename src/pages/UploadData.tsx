@@ -3,6 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useWallet } from "@/contexts/WalletContext";
 import { useDatasetUpload } from "@/hooks/useThesisMeshData";
 import { submitDatasetToContract } from "@/services/api";
 
@@ -16,6 +17,7 @@ export default function UploadData() {
   const [error, setError] = useState<string | null>(null);
   const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
+  const { isConnected, walletAddress } = useWallet();
   const uploadMutation = useDatasetUpload();
 
   const preventDefault = (event: DragEvent<HTMLDivElement>) => {
@@ -31,6 +33,12 @@ export default function UploadData() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isConnected) {
+      setError("Please connect your wallet to log research data to the blockchain.");
+      return;
+    }
+
     setShelbyTxHash(null);
     setAptosTxHash(null);
     setError(null);
@@ -63,7 +71,18 @@ export default function UploadData() {
       setAptosTxHash(receipt.hash);
       setSubmitStep(null);
 
-      // Clear form on success
+      if (walletAddress) {
+        const storageKey = "thesismesh-wallet-uploads";
+        const current = window.localStorage.getItem(storageKey);
+        const parsed = current ? (JSON.parse(current) as Record<string, string[]>) : {};
+        const walletUploads = parsed[walletAddress] ?? [];
+
+        if (!walletUploads.includes(response.transactionHash)) {
+          parsed[walletAddress] = [...walletUploads, response.transactionHash];
+          window.localStorage.setItem(storageKey, JSON.stringify(parsed));
+        }
+      }
+
       setDatasetTitle("");
       setFacultyDiscipline("");
       setPrimaryResearcher("");
@@ -92,19 +111,31 @@ export default function UploadData() {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Upload Data</h2>
         <p className="text-sm text-slate-600">Ingest new research datasets into the Shelby Network.</p>
+        {isConnected && walletAddress && (
+          <p className="mt-1 text-xs text-slate-500">Connected signer: {walletAddress}</p>
+        )}
       </div>
 
       <div
         onDrop={onDrop}
         onDragOver={preventDefault}
         onDragEnter={preventDefault}
-        className="rounded-lg border border-dashed border-slate-400 bg-slate-50 p-10 text-center cursor-pointer hover:bg-slate-100 transition-colors"
+        className="cursor-pointer rounded-lg border border-dashed border-slate-400 bg-slate-50 p-10 text-center transition-colors hover:bg-slate-100"
       >
         <p className="text-sm text-slate-700">Drag and drop a dataset file here</p>
         <p className="mt-2 text-xs font-medium text-slate-600">
           {file ? `Selected file: ${file.name}` : "No file selected"}
         </p>
       </div>
+
+      {!isConnected && (
+        <Alert className="border-amber-300 bg-amber-50">
+          <AlertTitle className="text-amber-800">Wallet required</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            Please connect your wallet to log research data to the blockchain.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -140,7 +171,7 @@ export default function UploadData() {
         <Button
           type="submit"
           className="bg-indigo-600 hover:bg-indigo-700"
-          disabled={uploadMutation.isPending || submitStep === "awaitingWallet"}
+          disabled={!isConnected || uploadMutation.isPending || submitStep === "awaitingWallet"}
         >
           {submitStep === "uploading"
             ? "Uploading to Shelby..."

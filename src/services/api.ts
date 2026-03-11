@@ -6,6 +6,46 @@ const aptosConfig = new AptosConfig({ network: Network.TESTNET });
 export const aptos = new Aptos(aptosConfig);
 export const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
+const APTOS_TESTNET_INDEXER_URL = "https://api.testnet.aptoslabs.com/v1/graphql";
+
+const GET_DATASET_EVENTS_QUERY = `
+query GetDatasetEvents($contractAddress: String!) {
+  events(
+    where: {
+      account_address: { _eq: $contractAddress },
+      type: { _like: "%::registry::DatasetUploadedEvent" }
+    }
+    order_by: { transaction_version: desc }
+  ) {
+    transaction_version
+    data
+  }
+}
+`;
+
+interface GraphQLError {
+  message: string;
+}
+
+interface DatasetEventData {
+  title: string;
+  faculty: string;
+  researcher: string;
+  shelby_hash: string;
+  upload_time: string | number;
+}
+
+interface DatasetEvent {
+  transaction_version: number | string;
+  data: DatasetEventData;
+}
+
+interface GetDatasetEventsResponse {
+  data?: {
+    events: DatasetEvent[];
+  };
+  errors?: GraphQLError[];
+}
 
 export interface UploadDatasetPayload {
   datasetTitle: string;
@@ -23,6 +63,7 @@ export interface CitationLedgerRecord {
   datasetTitle: string;
   dateUploaded: string;
   faculty: string;
+  researcher: string;
   cryptographicReceipt: string;
 }
 
@@ -37,6 +78,8 @@ export interface RecentActivityRecord {
   datasetTitle: string;
   dateUploaded: string;
   researcher: string;
+  faculty: string;
+  cryptographicReceipt: string;
 }
 
 export interface AuditMessageResponse {
@@ -87,16 +130,82 @@ export async function uploadDataset(
   return response.json() as Promise<UploadDatasetResponse>;
 }
 
-export function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {
-  return request<CitationLedgerRecord[]>("/citations/ledger");
+function formatMicrosecondsToDate(uploadTime: string | number): string {
+  const timestamp = Number(uploadTime);
+
+  if (!Number.isFinite(timestamp)) {
+    return new Date(0).toISOString();
+  }
+
+  return new Date(Math.floor(timestamp / 1000)).toISOString();
 }
 
-export function fetchDashboardMetrics(): Promise<DashboardMetrics> {
-  return request<DashboardMetrics>("/dashboard/metrics");
+async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
+  const response = await fetch(APTOS_TESTNET_INDEXER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: GET_DATASET_EVENTS_QUERY,
+      variables: {
+        contractAddress: CONTRACT_ADDRESS,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `GraphQL request failed with status ${response.status}`);
+  }
+
+  const body = (await response.json()) as GetDatasetEventsResponse;
+
+  if (body.errors?.length) {
+    throw new Error(body.errors.map((error) => error.message).join(", "));
+  }
+
+  return body.data?.events ?? [];
 }
 
-export function fetchRecentActivity(): Promise<RecentActivityRecord[]> {
-  return request<RecentActivityRecord[]>("/dashboard/activity");
+function mapEventsToRecords(events: DatasetEvent[]): CitationLedgerRecord[] {
+  return events.map((event) => ({
+    id: String(event.transaction_version),
+    datasetTitle: event.data.title,
+    dateUploaded: formatMicrosecondsToDate(event.data.upload_time),
+    faculty: event.data.faculty,
+    researcher: event.data.researcher,
+    cryptographicReceipt: event.data.shelby_hash,
+  }));
+}
+
+export async function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {
+  const events = await fetchDatasetEvents();
+  return mapEventsToRecords(events);
+}
+
+export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
+  const records = await fetchCitationLedger();
+  const uniqueFaculties = new Set(records.map((record) => record.faculty));
+
+  return {
+    totalDatasetsSecured: records.length,
+    globalFacultiesConnected: uniqueFaculties.size,
+    totalEgressSaved: "Calculated On-Chain",
+  };
+}
+
+export async function fetchRecentActivity(): Promise<RecentActivityRecord[]> {
+  const records = await fetchCitationLedger();
+
+  return records.map((record) => ({
+    id: record.id,
+    datasetTitle: record.datasetTitle,
+    dateUploaded: record.dateUploaded,
+    researcher: record.researcher,
+    faculty: record.faculty,
+    cryptographicReceipt: record.cryptographicReceipt,
+  }));
 }
 
 export function verifyCitationHash(hash: string): Promise<AuditMessageResponse> {

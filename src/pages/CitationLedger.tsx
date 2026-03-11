@@ -1,4 +1,6 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -28,7 +30,11 @@ export default function CitationLedger() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-600">Loading citation ledger...</p>
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
       ) : (
         <div className="rounded-lg border border-slate-300">
           <Table>
@@ -37,6 +43,7 @@ export default function CitationLedger() {
                 <TableHead>Dataset Title</TableHead>
                 <TableHead>Date Uploaded</TableHead>
                 <TableHead>Faculty</TableHead>
+                <TableHead>Researcher</TableHead>
                 <TableHead>Cryptographic Receipt</TableHead>
               </TableRow>
             </TableHeader>
@@ -46,9 +53,12 @@ export default function CitationLedger() {
                   <TableCell>{record.datasetTitle}</TableCell>
                   <TableCell>{new Date(record.dateUploaded).toLocaleDateString()}</TableCell>
                   <TableCell>{record.faculty}</TableCell>
+                  <TableCell>{record.researcher}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs">{truncateHash(record.cryptographicReceipt)}</span>
+                      <Badge variant="secondary" className="font-mono text-xs">
+                        {truncateHash(record.cryptographicReceipt)}
+                      </Badge>
                       <Button
                         variant="outline"
                         size="sm"

@@ -1,5 +1,15 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardMetrics, useRecentActivity } from "@/hooks/useThesisMeshData";
+
+function truncateHash(hash: string): string {
+  if (hash.length <= 14) {
+    return hash;
+  }
+
+  return `${hash.slice(0, 8)}...${hash.slice(-6)}`;
+}
 
 export default function Dashboard() {
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
@@ -34,14 +44,28 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {loadingActivity ? (
-              <p className="text-sm text-slate-600">Loading activity feed...</p>
+              <div className="space-y-3">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
             ) : (
               <ul className="space-y-3">
                 {(activity ?? []).map((item) => (
                   <li key={item.id} className="rounded-md border border-slate-200 p-3">
-                    <p className="font-medium text-slate-900">{item.datasetTitle}</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="font-medium text-slate-900">{item.datasetTitle}</p>
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer font-mono text-xs"
+                        onClick={() => navigator.clipboard.writeText(item.cryptographicReceipt)}
+                        title="Click to copy full Shelby hash"
+                      >
+                        {truncateHash(item.cryptographicReceipt)}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-slate-600">
-                      {item.researcher} · {new Date(item.dateUploaded).toLocaleString()}
+                      {item.researcher} · {item.faculty} · {new Date(item.dateUploaded).toLocaleString()}
                     </p>
                   </li>
                 ))}

@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWallet } from "@/contexts/WalletContext";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useDashboardMetrics, useRecentActivity } from "@/hooks/useThesisMeshData";
 
 function truncateHash(hash: string): string {
@@ -16,7 +16,8 @@ function truncateHash(hash: string): string {
 
 export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"global" | "mine">("global");
-  const { walletAddress } = useWallet();
+  const { account } = useWallet();
+  const walletAddress = account?.address?.toString() ?? null;
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: activity, isLoading: loadingActivity } = useRecentActivity();
 

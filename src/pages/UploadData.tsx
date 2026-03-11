@@ -3,7 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useWallet } from "@/contexts/WalletContext";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useDatasetUpload } from "@/hooks/useThesisMeshData";
 import { submitDatasetToContract } from "@/services/api";
 
@@ -17,7 +17,8 @@ export default function UploadData() {
   const [error, setError] = useState<string | null>(null);
   const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
-  const { isConnected, walletAddress } = useWallet();
+  const { connected, account, signAndSubmitTransaction } = useWallet();
+  const walletAddress = account?.address?.toString() ?? null;
   const uploadMutation = useDatasetUpload();
 
   const preventDefault = (event: DragEvent<HTMLDivElement>) => {
@@ -34,7 +35,7 @@ export default function UploadData() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isConnected) {
+    if (!connected) {
       setError("Please connect your wallet to log research data to the blockchain.");
       return;
     }
@@ -66,6 +67,7 @@ export default function UploadData() {
         facultyDiscipline,
         primaryResearcher,
         response.transactionHash,
+        signAndSubmitTransaction,
       );
 
       setAptosTxHash(receipt.hash);
@@ -111,7 +113,7 @@ export default function UploadData() {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Upload Data</h2>
         <p className="text-sm text-slate-600">Ingest new research datasets into the Shelby Network.</p>
-        {isConnected && walletAddress && (
+        {connected && walletAddress && (
           <p className="mt-1 text-xs text-slate-500">Connected signer: {walletAddress}</p>
         )}
       </div>
@@ -128,7 +130,7 @@ export default function UploadData() {
         </p>
       </div>
 
-      {!isConnected && (
+      {!connected && (
         <Alert className="border-amber-300 bg-amber-50">
           <AlertTitle className="text-amber-800">Wallet required</AlertTitle>
           <AlertDescription className="text-amber-700">
@@ -171,7 +173,7 @@ export default function UploadData() {
         <Button
           type="submit"
           className="bg-indigo-600 hover:bg-indigo-700"
-          disabled={!isConnected || uploadMutation.isPending || submitStep === "awaitingWallet"}
+          disabled={!connected || uploadMutation.isPending || submitStep === "awaitingWallet"}
         >
           {submitStep === "uploading"
             ? "Uploading to Shelby..."

@@ -9,13 +9,20 @@ export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
   const [datasetTitle, setDatasetTitle] = useState("");
   const [facultyDiscipline, setFacultyDiscipline] = useState("");
+  // Initialize as an empty string
   const [primaryResearcher, setPrimaryResearcher] = useState("");
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const uploadMutation = useDatasetUpload();
 
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+  const preventDefault = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    preventDefault(event);
     const droppedFile = event.dataTransfer.files?.[0] ?? null;
     setFile(droppedFile);
   };
@@ -23,15 +30,30 @@ export default function UploadData() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTxHash(null);
+    setError(null);
 
-    const response = await uploadMutation.mutateAsync({
-      datasetTitle,
-      facultyDiscipline,
-      primaryResearcher,
-      file,
-    });
+    if (!file) {
+      setError("Please select or drop a dataset file before uploading.");
+      return;
+    }
 
-    setTxHash(response.transactionHash);
+    try {
+      const response = await uploadMutation.mutateAsync({
+        datasetTitle,
+        facultyDiscipline,
+        primaryResearcher,
+        file,
+      });
+      setTxHash(response.transactionHash);
+      
+      // Clear form on success
+      setDatasetTitle("");
+      setFacultyDiscipline("");
+      setPrimaryResearcher("");
+      setFile(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred during upload.");
+    }
   };
 
   return (
@@ -43,11 +65,12 @@ export default function UploadData() {
 
       <div
         onDrop={onDrop}
-        onDragOver={(event) => event.preventDefault()}
-        className="rounded-lg border border-dashed border-slate-400 bg-slate-50 p-10 text-center"
+        onDragOver={preventDefault}
+        onDragEnter={preventDefault}
+        className="rounded-lg border border-dashed border-slate-400 bg-slate-50 p-10 text-center cursor-pointer hover:bg-slate-100 transition-colors"
       >
         <p className="text-sm text-slate-700">Drag and drop a dataset file here</p>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs font-medium text-slate-600">
           {file ? `Selected file: ${file.name}` : "No file selected"}
         </p>
       </div>
@@ -84,14 +107,23 @@ export default function UploadData() {
         </div>
 
         <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={uploadMutation.isPending}>
-          {uploadMutation.isPending ? "Uploading..." : "Upload to Shelby Network"}
+          {uploadMutation.isPending ? "Connecting to Petra Wallet..." : "Upload to Shelby Network"}
         </Button>
       </form>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {txHash && (
-        <Alert className="border-indigo-300">
-          <AlertTitle>Upload successful</AlertTitle>
-          <AlertDescription>Aptos transaction hash: {txHash}</AlertDescription>
+        <Alert className="border-indigo-300 bg-indigo-50">
+          <AlertTitle className="text-indigo-800">Upload successful</AlertTitle>
+          <AlertDescription className="text-indigo-700">
+            Aptos transaction hash: <span className="font-mono text-xs">{txHash}</span>
+          </AlertDescription>
         </Alert>
       )}
     </div>

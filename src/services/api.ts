@@ -1,4 +1,4 @@
-import { ShelbyClient } from '@shelby-protocol/sdk';
+import { ShelbyClient } from '@shelby-protocol/sdk/browser';
 
 // Global declaration for the Petra Wallet extension
 declare global {

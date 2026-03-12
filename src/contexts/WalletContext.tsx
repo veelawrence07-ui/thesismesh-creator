@@ -10,6 +10,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         fullnode: "https://api.shelbynet.shelby.xyz/v1",
       }}
       autoConnect
+      optInWallets={["Petra"]}
     >
       {children}
     </AptosWalletAdapterProvider>

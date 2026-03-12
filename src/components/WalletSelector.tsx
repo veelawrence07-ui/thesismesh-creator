@@ -15,11 +15,13 @@ export function WalletSelector() {
     }
   };
 
-  // If connected, show their address and allow them to click to disconnect
+  // THE FIX: Convert the address object to a string before slicing it
   if (connected && account) {
+    const addressString = account.address.toString();
+    
     return (
       <Button variant="outline" onClick={disconnect}>
-        {account.address.slice(0, 6)}...{account.address.slice(-4)}
+        {addressString.slice(0, 6)}...{addressString.slice(-4)}
       </Button>
     );
   }

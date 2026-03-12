@@ -83,7 +83,7 @@ export default function AppLayout() {
                     Connect your wallet to access Dashboard views, upload datasets, and interact with the global registry.
                   </p>
                   <div className="mt-4 flex justify-center">
-                    <WalletSelector className="bg-indigo-600 hover:bg-indigo-700" />
+                    <WalletSelector />
                   </div>
                 </div>
               </div>

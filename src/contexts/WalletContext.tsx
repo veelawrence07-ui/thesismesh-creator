@@ -1,5 +1,4 @@
 import { AptosWalletAdapterProvider, useWallet as useAptosWallet } from "@aptos-labs/wallet-adapter-react";
-import { aptosDappConfig } from "@/config/aptos";
 import type { ReactNode } from "react";
 
 const LEGACY_NETWORK_NAME = "shelbynet";
@@ -35,7 +34,6 @@ clearLegacyShelbynetWalletState();
 export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <AptosWalletAdapterProvider
-      dappConfig={aptosDappConfig}
       autoConnect
       optInWallets={["Petra"]}
     >

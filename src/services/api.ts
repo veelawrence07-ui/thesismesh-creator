@@ -1,12 +1,14 @@
 import { SHELBYNET_INDEXER_URL } from "@/config/aptos";
+
 const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
+
+// THE FIX: Removed the restrictive account_address filter and search purely by the exact event type
 const GET_DATASET_EVENTS_QUERY = `
-query GetDatasetEvents($contractAddress: String!) {
+query GetDatasetEvents($eventType: String!) {
   events(
     where: {
-      account_address: { _eq: $contractAddress },
-      type: { _like: "%::registry::DatasetUploadedEvent" }
+      type: { _eq: $eventType }
     }
     order_by: { transaction_version: desc }
   ) {
@@ -71,10 +73,13 @@ function parseEventData(data: DatasetEvent['data']): DatasetEventData | null {
 }
 
 async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
+  // THE FIX: Define the exact event string to pass to the indexer
+  const eventType = `${CONTRACT_ADDRESS}::registry::DatasetUploadedEvent`;
+  
   const response = await fetch(SHELBYNET_INDEXER_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: GET_DATASET_EVENTS_QUERY, variables: { contractAddress: CONTRACT_ADDRESS } }),
+    body: JSON.stringify({ query: GET_DATASET_EVENTS_QUERY, variables: { eventType } }),
   });
   if (!response.ok) {
     throw new Error((await response.text()) || `GraphQL request failed with status ${response.status}`);

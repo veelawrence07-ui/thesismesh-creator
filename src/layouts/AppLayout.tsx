@@ -1,6 +1,13 @@
-import { WalletSelector } from "@aptos-labs/wallet-adapter-ant-design";
+import { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { NavLink, Outlet } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -16,6 +23,68 @@ function shortenWalletAddress(address: string): string {
   }
 
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function WalletConnectButton({ className }: { className?: string }) {
+  const [isConnecting, setIsConnecting] = useState(false);
+  const { connected, wallet, wallets, connect, disconnect } = useWallet();
+  const isDetectingWallets = wallets.length === 0;
+
+  const onConnect = async (walletName: string) => {
+    setIsConnecting(true);
+
+    try {
+      await connect(walletName as never);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  if (connected && wallet) {
+    return (
+      <Button type="button" variant="outline" className={className} onClick={() => void disconnect()}>
+        Disconnect {wallet.name}
+      </Button>
+    );
+  }
+
+  if (isDetectingWallets) {
+    return (
+      <Button type="button" className={className} disabled>
+        Detecting Wallets...
+      </Button>
+    );
+  }
+
+  if (wallets.length === 0) {
+    return (
+      <Button type="button" className={className} disabled>
+        No Wallet Detected
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" className={className} disabled={isConnecting}>
+          {isConnecting ? "Connecting..." : "Connect Wallet"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        {wallets.map((walletOption) => (
+          <DropdownMenuItem
+            key={walletOption.name}
+            onSelect={() => {
+              void onConnect(walletOption.name);
+            }}
+          >
+            {walletOption.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export default function AppLayout() {
@@ -56,9 +125,11 @@ export default function AppLayout() {
           <header className="mb-6 flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Shelbynet / Aptos</p>
-              <p className="text-sm text-slate-700">Connect Petra wallet to sign and log on-chain research actions.</p>
+              <p className="text-sm text-slate-700">Connect your Aptos wallet to sign and log on-chain research actions.</p>
               {isLoadingWallet && <p className="mt-1 text-xs text-slate-500">Detecting wallet extension...</p>}
-              {!isLoadingWallet && !wallet && <p className="mt-1 text-xs text-red-600">No Aptos wallet extension detected.</p>}
+              {!isLoadingWallet && !wallet && (
+                <p className="mt-1 text-xs text-red-600">No Aptos wallet extension detected.</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -67,7 +138,7 @@ export default function AppLayout() {
                   {shortenWalletAddress(walletAddress)}
                 </div>
               )}
-              <WalletSelector />
+              <WalletConnectButton />
             </div>
           </header>
 
@@ -78,10 +149,10 @@ export default function AppLayout() {
                 <div className="max-w-md rounded-lg border border-indigo-200 bg-white p-6 text-center shadow">
                   <h2 className="text-lg font-semibold text-slate-900">Wallet Connection Required</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Connect your Petra wallet to access Dashboard views, upload datasets, and interact with the global registry.
+                    Connect your wallet to access Dashboard views, upload datasets, and interact with the global registry.
                   </p>
                   <div className="mt-4 flex justify-center">
-                    <WalletSelector />
+                    <WalletConnectButton className="bg-indigo-600 hover:bg-indigo-700" />
                   </div>
                 </div>
               </div>

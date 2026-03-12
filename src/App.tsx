@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Network } from "@aptos-labs/ts-sdk";
 import { AptosWalletAdapterProvider } from "@aptos-labs/wallet-adapter-react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { PetraWallet } from "petra-plugin-wallet-adapter";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,18 +11,16 @@ import CitationLedger from "@/pages/CitationLedger";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/NotFound";
 import UploadData from "@/pages/UploadData";
-import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 
 const queryClient = new QueryClient();
-const wallets = [new PetraWallet()];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AptosWalletAdapterProvider
-        plugins={wallets}
         dappConfig={{
           network: Network.CUSTOM,
+          fullnode: "https://api.shelbynet.shelby.xyz/v1",
           aptosConnect: {
             network: {
               customConfig: {

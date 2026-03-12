@@ -16,7 +16,7 @@ function truncateHash(hash: string): string {
 
 export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"global" | "mine">("global");
-  const { account } = useWallet();
+  const { account, connected, network } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: activity, isLoading: loadingActivity } = useRecentActivity();
@@ -41,6 +41,9 @@ export default function Dashboard() {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
         <p className="text-sm text-slate-600">Overview of network-secured research assets.</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Wallet: {connected ? "Connected" : "Disconnected"} · Network: {network?.name ?? "Unknown"}
+        </p>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">

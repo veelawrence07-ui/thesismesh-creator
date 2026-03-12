@@ -17,7 +17,7 @@ export default function UploadData() {
   const [error, setError] = useState<string | null>(null);
   const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
-  const { connected, account, signAndSubmitTransaction } = useWallet();
+  const { connected, account, network, signAndSubmitTransaction } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
   const uploadMutation = useDatasetUpload();
 
@@ -113,9 +113,9 @@ export default function UploadData() {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Upload Data</h2>
         <p className="text-sm text-slate-600">Ingest new research datasets into the Shelby Network.</p>
-        {connected && walletAddress && (
-          <p className="mt-1 text-xs text-slate-500">Connected signer: {walletAddress}</p>
-        )}
+        <p className="mt-1 text-xs text-slate-500">
+          Wallet: {connected && walletAddress ? walletAddress : "Disconnected"} · Network: {network?.name ?? "Unknown"}
+        </p>
       </div>
 
       <div

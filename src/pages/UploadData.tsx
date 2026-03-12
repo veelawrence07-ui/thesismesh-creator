@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { useDatasetUpload } from "@/hooks/useThesisMeshData";
 import { submitDatasetToContract } from "@/services/api";
+import { uploadFileToShelby } from "@/services/shelbyStorage";
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
@@ -19,7 +19,6 @@ export default function UploadData() {
 
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
-  const uploadMutation = useDatasetUpload();
 
   const preventDefault = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -52,21 +51,16 @@ export default function UploadData() {
     }
 
     try {
-      const response = await uploadMutation.mutateAsync({
-        datasetTitle,
-        facultyDiscipline,
-        primaryResearcher,
-        file,
-      });
+      const shelbyBlobId = await uploadFileToShelby(file);
 
-      setShelbyTxHash(response.transactionHash);
+      setShelbyTxHash(shelbyBlobId);
       setSubmitStep("awaitingWallet");
 
       const receipt = await submitDatasetToContract(
         datasetTitle,
         facultyDiscipline,
         primaryResearcher,
-        response.transactionHash,
+        shelbyBlobId,
         signAndSubmitTransaction,
       );
 
@@ -79,8 +73,8 @@ export default function UploadData() {
         const parsed = current ? (JSON.parse(current) as Record<string, string[]>) : {};
         const walletUploads = parsed[walletAddress] ?? [];
 
-        if (!walletUploads.includes(response.transactionHash)) {
-          parsed[walletAddress] = [...walletUploads, response.transactionHash];
+        if (!walletUploads.includes(shelbyBlobId)) {
+          parsed[walletAddress] = [...walletUploads, shelbyBlobId];
           window.localStorage.setItem(storageKey, JSON.stringify(parsed));
         }
       }
@@ -173,10 +167,10 @@ export default function UploadData() {
         <Button
           type="submit"
           className="bg-indigo-600 hover:bg-indigo-700"
-          disabled={!connected || uploadMutation.isPending || submitStep === "awaitingWallet"}
+          disabled={!connected || submitStep !== null}
         >
           {submitStep === "uploading"
-            ? "Uploading to Shelby..."
+            ? "Uploading file to Shelby Storage..."
             : submitStep === "awaitingWallet"
               ? "Awaiting Wallet Signature..."
               : "Upload to Shelby Network"}

@@ -21,15 +21,6 @@ const App = () => (
         dappConfig={{
           network: Network.CUSTOM,
           fullnode: "https://api.shelbynet.shelby.xyz/v1",
-          aptosConnect: {
-            network: {
-              customConfig: {
-                chainId: 1,
-                name: "Shelbynet",
-                url: "https://api.shelbynet.shelby.xyz/v1",
-              },
-            },
-          },
         }}
         autoConnect
       >

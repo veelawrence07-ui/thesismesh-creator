@@ -1,13 +1,6 @@
-import { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { WalletSelector } from "@/components/WalletSelector";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -23,68 +16,6 @@ function shortenWalletAddress(address: string): string {
   }
 
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-function WalletConnectButton({ className }: { className?: string }) {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const { connected, wallet, wallets, connect, disconnect } = useWallet();
-  const isDetectingWallets = wallets.length === 0;
-
-  const onConnect = async (walletName: string) => {
-    setIsConnecting(true);
-
-    try {
-      await connect(walletName as never);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  if (connected && wallet) {
-    return (
-      <Button type="button" variant="outline" className={className} onClick={() => void disconnect()}>
-        Disconnect {wallet.name}
-      </Button>
-    );
-  }
-
-  if (isDetectingWallets) {
-    return (
-      <Button type="button" className={className} disabled>
-        Detecting Wallets...
-      </Button>
-    );
-  }
-
-  if (wallets.length === 0) {
-    return (
-      <Button type="button" className={className} disabled>
-        No Wallet Detected
-      </Button>
-    );
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" className={className} disabled={isConnecting}>
-          {isConnecting ? "Connecting..." : "Connect Wallet"}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {wallets.map((walletOption) => (
-          <DropdownMenuItem
-            key={walletOption.name}
-            onSelect={() => {
-              void onConnect(walletOption.name);
-            }}
-          >
-            {walletOption.name}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 }
 
 export default function AppLayout() {
@@ -138,7 +69,7 @@ export default function AppLayout() {
                   {shortenWalletAddress(walletAddress)}
                 </div>
               )}
-              <WalletConnectButton />
+              <WalletSelector />
             </div>
           </header>
 
@@ -152,7 +83,7 @@ export default function AppLayout() {
                     Connect your wallet to access Dashboard views, upload datasets, and interact with the global registry.
                   </p>
                   <div className="mt-4 flex justify-center">
-                    <WalletConnectButton className="bg-indigo-600 hover:bg-indigo-700" />
+                    <WalletSelector className="bg-indigo-600 hover:bg-indigo-700" />
                   </div>
                 </div>
               </div>

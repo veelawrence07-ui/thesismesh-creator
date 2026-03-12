@@ -3,9 +3,7 @@ import {
   fetchCitationLedger,
   fetchDashboardMetrics,
   fetchRecentActivity,
-  uploadDataset,
   verifyCitationHash,
-  type UploadDatasetPayload,
 } from "@/services/api";
 
 export function useDashboardMetrics() {
@@ -26,12 +24,6 @@ export function useCitationLedger() {
   return useQuery({
     queryKey: ["citation-ledger"],
     queryFn: fetchCitationLedger,
-  });
-}
-
-export function useDatasetUpload() {
-  return useMutation({
-    mutationFn: (payload: UploadDatasetPayload) => uploadDataset(payload),
   });
 }
 

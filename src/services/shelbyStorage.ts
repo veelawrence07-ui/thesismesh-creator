@@ -20,6 +20,8 @@ export async function uploadFileToShelby(file: File, sessionId: string): Promise
     const headers: Record<string, string> = {
       // Pass the Session ID so Shelby knows which micropayment channel to bill
       "X-Shelby-Session": sessionId,
+      // REQUIRED: Shelby requires explicit expiration on all uploads (30 days in seconds)
+      "x-expiration-seconds": "2592000",
     };
 
     // Inject the API key to bypass Geomi rate limits and auth walls

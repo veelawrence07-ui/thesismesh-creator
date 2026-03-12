@@ -1,4 +1,4 @@
-import * as ShelbySDK from "@shelby-protocol/sdk";
+import * as ShelbySDK from "@shelby-protocol/sdk/browser";
 
 const SHELBY_RPC_URL = "https://api.shelbynet.shelby.xyz/shelby";
 

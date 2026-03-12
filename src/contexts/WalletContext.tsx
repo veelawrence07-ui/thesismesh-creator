@@ -44,10 +44,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 export const useWallet = useAptosWallet;
 
-export function shortenWalletAddress(address: string): string {
-  if (address.length <= 12) {
-    return address;
+export function shortenWalletAddress(address: any): string {
+  if (!address) return "";
+  
+  // Safely convert the object to a string
+  const addressString = address.toString();
+
+  if (addressString.length <= 12) {
+    return addressString;
   }
 
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${addressString.slice(0, 6)}...${addressString.slice(-4)}`;
 }

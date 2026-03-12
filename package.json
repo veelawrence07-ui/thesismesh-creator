@@ -63,7 +63,10 @@
     "vaul": "^0.9.9",
     "zod": "^3.25.76",
     "@aptos-labs/ts-sdk": "^3.1.2",
-    "@aptos-labs/wallet-adapter-react": "^4.0.0"
+    "@aptos-labs/wallet-adapter-react": "^4.0.0",
+    "@mizuwallet-sdk/core": "latest",
+    "@telegram-apps/bridge": "latest",
+    "aptos": "latest"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

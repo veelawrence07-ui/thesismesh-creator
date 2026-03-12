@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,11 @@ import {
 export function WalletSelector({ className }: { className?: string }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const { connected, wallet, wallets, connect, disconnect } = useWallet();
+
+  const petraWallet = useMemo(
+    () => wallets.find((walletOption) => walletOption.name.toLowerCase().includes("petra")),
+    [wallets],
+  );
 
   const onConnect = async (walletName: string) => {
     setIsConnecting(true);
@@ -34,6 +39,14 @@ export function WalletSelector({ className }: { className?: string }) {
     return (
       <Button type="button" className={className} disabled>
         Detecting Wallets...
+      </Button>
+    );
+  }
+
+  if (petraWallet) {
+    return (
+      <Button type="button" className={className} disabled={isConnecting} onClick={() => void onConnect(petraWallet.name)}>
+        {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
       </Button>
     );
   }

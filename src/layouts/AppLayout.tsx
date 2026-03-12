@@ -19,7 +19,7 @@ function shortenWalletAddress(address: string): string {
 }
 
 export default function AppLayout() {
-  const { account, connected, wallet, wallets } = useWallet();
+  const { account, connected, wallets } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
   const isLoadingWallet = wallets.length === 0;
 
@@ -57,9 +57,9 @@ export default function AppLayout() {
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Shelbynet / Aptos</p>
               <p className="text-sm text-slate-700">Connect your Aptos wallet to sign and log on-chain research actions.</p>
-              {isLoadingWallet && <p className="mt-1 text-xs text-slate-500">Detecting wallet extension...</p>}
-              {!isLoadingWallet && !wallet && (
-                <p className="mt-1 text-xs text-red-600">No Aptos wallet extension detected.</p>
+              {isLoadingWallet && <p className="mt-1 text-xs text-slate-500">Detecting available wallets...</p>}
+              {!isLoadingWallet && !connected && (
+                <p className="mt-1 text-xs text-slate-500">Select a wallet to continue.</p>
               )}
             </div>
 

@@ -42,7 +42,7 @@ export function WalletSelector({ className }: { className?: string }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" className={className} disabled={isConnecting}>
-          {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
+          {isConnecting ? "Connecting..." : "Connect Wallet"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

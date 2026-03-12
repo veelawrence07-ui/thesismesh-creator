@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type FormEvent } from "react";
+import { useState, useRef, type DragEvent, type FormEvent, type ChangeEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,9 @@ export default function UploadData() {
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
 
+  // NEW: Reference to the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const preventDefault = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -29,6 +32,18 @@ export default function UploadData() {
     preventDefault(event);
     const droppedFile = event.dataTransfer.files?.[0] ?? null;
     setFile(droppedFile);
+  };
+
+  // NEW: Handlers for clicking and selecting files
+  const handleAreaClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const onFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0] ?? null;
+    setFile(selectedFile);
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -112,16 +127,24 @@ export default function UploadData() {
         </p>
       </div>
 
+      {/* UPDATED: Added onClick and the hidden input */}
       <div
+        onClick={handleAreaClick}
         onDrop={onDrop}
         onDragOver={preventDefault}
         onDragEnter={preventDefault}
         className="cursor-pointer rounded-lg border border-dashed border-slate-400 bg-slate-50 p-10 text-center transition-colors hover:bg-slate-100"
       >
-        <p className="text-sm text-slate-700">Drag and drop a dataset file here</p>
+        <p className="text-sm text-slate-700">Drag and drop a dataset file here, or click to select</p>
         <p className="mt-2 text-xs font-medium text-slate-600">
           {file ? `Selected file: ${file.name}` : "No file selected"}
         </p>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={onFileInputChange}
+          className="hidden"
+        />
       </div>
 
       {!connected && (

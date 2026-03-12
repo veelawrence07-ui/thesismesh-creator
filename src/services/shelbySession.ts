@@ -21,7 +21,7 @@ export async function createShelbySession(walletAddress: string) {
       headers,
       body: JSON.stringify({
         userAddress: walletAddress,
-        requestedChunksets: 50 
+        requestedChunksets: 5
       }),
     });
 

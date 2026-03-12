@@ -6,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useWallet } from "@/contexts/WalletContext";
 import { submitDatasetToContract } from "@/services/api";
 import { uploadFileToShelby } from "@/services/shelbyStorage";
-// Ensure you have this function in your services to handle session creation
-import { createShelbySession } from "@/services/shelbySession"; 
+import { createShelbySession } from "@/services/shelbySession";
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,7 +16,6 @@ export default function UploadData() {
   const [shelbyTxHash, setShelbyTxHash] = useState<string | null>(null);
   const [aptosTxHash, setAptosTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Added "authorizing" step for the session creation phase
   const [submitStep, setSubmitStep] = useState<"authorizing" | "uploading" | "awaitingWallet" | null>(null);
 
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
@@ -106,16 +104,25 @@ export default function UploadData() {
       setFile(null);
     } catch (err) {
       setSubmitStep(null);
+      
+      let errorMessage = "An unknown error occurred during upload.";
+      
       if (err instanceof Error) {
-        const message = err.message.toLowerCase();
-        if (message.includes("user rejected") || message.includes("rejected")) {
-          setError("Transaction rejected in wallet. Please approve the signature to complete logging.");
-          return;
+        if (err.message === "INSUFFICIENT_FUNDS") {
+           errorMessage = "Your Shelbynet storage channel is empty. Please visit the Shelbynet Dashboard or Faucet to deposit ShelbyUSD, then try again.";
+        } else {
+           const lowerMsg = err.message.toLowerCase();
+           if (lowerMsg.includes("user rejected") || lowerMsg.includes("rejected")) {
+             errorMessage = "Transaction rejected in wallet. Please approve the signature to complete logging.";
+           } else {
+             errorMessage = err.message;
+           }
         }
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred during upload.");
+      } else if (typeof err === "string") {
+        errorMessage = err;
       }
+      
+      setError(errorMessage);
     }
   };
 

@@ -1,4 +1,4 @@
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { useWallet } from "@/contexts/WalletContext";
 import { NavLink, Outlet } from "react-router-dom";
 import { WalletSelector } from "@/components/WalletSelector";
 import { cn } from "@/lib/utils";

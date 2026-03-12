@@ -1,7 +1,6 @@
+import { SHELBYNET_INDEXER_URL } from "@/config/aptos";
 const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
-const SHELBYNET_INDEXER_URL = "https://api.shelbynet.shelby.xyz/v1/graphql";
-
 const GET_DATASET_EVENTS_QUERY = `
 query GetDatasetEvents($contractAddress: String!) {
   events(

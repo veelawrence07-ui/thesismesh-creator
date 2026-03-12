@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { useWallet } from "@/contexts/WalletContext";
 import { useDashboardMetrics, useRecentActivity } from "@/hooks/useThesisMeshData";
 
 function truncateHash(hash: string): string {

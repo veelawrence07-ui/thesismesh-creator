@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { useWallet } from "@/contexts/WalletContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { useMemo, useState } from "react";
+import { useWallet } from "@/contexts/WalletContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,11 @@ import {
 export function WalletSelector({ className }: { className?: string }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const { connected, wallet, wallets, connect, disconnect } = useWallet();
+
+  const petraWallet = useMemo(
+    () => wallets.find((walletOption) => walletOption.name.toLowerCase().includes("petra")),
+    [wallets],
+  );
 
   const onConnect = async (walletName: string) => {
     setIsConnecting(true);
@@ -38,11 +43,19 @@ export function WalletSelector({ className }: { className?: string }) {
     );
   }
 
+  if (petraWallet) {
+    return (
+      <Button type="button" className={className} disabled={isConnecting} onClick={() => void onConnect(petraWallet.name)}>
+        {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" className={className} disabled={isConnecting}>
-          {isConnecting ? "Connecting..." : "Connect Petra Wallet"}
+          {isConnecting ? "Connecting..." : "Connect Wallet"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

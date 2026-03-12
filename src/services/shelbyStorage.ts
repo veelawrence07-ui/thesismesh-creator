@@ -1,4 +1,7 @@
-const SHELBY_API_BASE = "https://api.shelbynet.shelby.xyz/shelby";
+// Updated to the official testnet URL!
+const SHELBY_API_BASE = "https://api.testnet.shelby.xyz/shelby";
+// Grab the Client Key you generated on Geomi
+const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
 /**
  * Uploads a file to the real Shelbynet Storage network.
@@ -13,13 +16,23 @@ export async function uploadFileToShelby(file: File, sessionId: string): Promise
   try {
     console.log(`⬆️ Uploading ${file.name} to Shelby Storage...`);
 
+    // Prepare headers (Do NOT manually set Content-Type when sending FormData)
+    const headers: Record<string, string> = {
+      // Pass the Session ID so Shelby knows which micropayment channel to bill
+      "X-Shelby-Session": sessionId,
+    };
+
+    // Inject the API key to bypass Geomi rate limits and auth walls
+    if (SHELBY_API_KEY) {
+      headers["Authorization"] = `Bearer ${SHELBY_API_KEY}`;
+    } else {
+      console.warn("⚠️ VITE_SHELBY_API_KEY is missing. Upload request may fail.");
+    }
+
     // 2. Execute the upload request
     const response = await fetch(`${SHELBY_API_BASE}/v1/blobs/upload`, {
       method: "POST",
-      headers: {
-        // We pass the Session ID so Shelby knows which micropayment channel to bill
-        "X-Shelby-Session": sessionId,
-      },
+      headers,
       body: formData,
     });
 
@@ -32,7 +45,6 @@ export async function uploadFileToShelby(file: File, sessionId: string): Promise
     console.log("✅ Shelby Upload Success:", data);
 
     // 3. Return the real cryptographic hash (blob ID) returned by the network
-    // Note: Adjust 'data.blobId' based on the exact key in the Shelbynet JSON response
     const finalHash = data.blobId || data.hash || data.blobName;
 
     if (!finalHash) {

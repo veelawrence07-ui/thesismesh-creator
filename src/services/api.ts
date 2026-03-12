@@ -3,15 +3,18 @@ import { SHELBYNET_INDEXER_URL } from "@/config/aptos";
 const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
 
-// THE FIX: Removed the restrictive account_address filter and search purely by the exact event type
+// THE FIX: We use a fuzzy search (_like) to find ANYTHING with "Dataset" in the event name
+// This bypasses any typos in the contract address or the exact event name.
 const GET_DATASET_EVENTS_QUERY = `
-query GetDatasetEvents($eventType: String!) {
+query GetDatasetEvents {
   events(
     where: {
-      type: { _eq: $eventType }
+      type: { _like: "%Dataset%" }
     }
     order_by: { transaction_version: desc }
+    limit: 50
   ) {
+    type
     transaction_version
     data
   }
@@ -26,7 +29,11 @@ interface DatasetEventData {
   shelby_hash: string;
   upload_time: string | number;
 }
-interface DatasetEvent { transaction_version: number | string; data: DatasetEventData | string }
+interface DatasetEvent { 
+  type?: string; 
+  transaction_version: number | string; 
+  data: DatasetEventData | string;
+}
 interface GetDatasetEventsResponse { data?: { events: DatasetEvent[] }; errors?: GraphQLError[] }
 
 export interface CitationLedgerRecord {
@@ -69,25 +76,32 @@ function parseEventData(data: DatasetEvent['data']): DatasetEventData | null {
   if (typeof data === 'string') {
     try { return JSON.parse(data) as DatasetEventData; } catch { return null; }
   }
-  return data;
+  return data as DatasetEventData;
 }
 
 async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
-  // THE FIX: Define the exact event string to pass to the indexer
-  const eventType = `${CONTRACT_ADDRESS}::registry::DatasetUploadedEvent`;
+  console.log("📡 Querying Shelbynet Indexer...");
   
   const response = await fetch(SHELBYNET_INDEXER_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: GET_DATASET_EVENTS_QUERY, variables: { eventType } }),
+    body: JSON.stringify({ query: GET_DATASET_EVENTS_QUERY }),
   });
+  
   if (!response.ok) {
     throw new Error((await response.text()) || `GraphQL request failed with status ${response.status}`);
   }
+  
   const body = (await response.json()) as GetDatasetEventsResponse;
+  
+  // Print the raw truth to the browser console
+  console.log("📦 Raw Indexer Data:", body);
+  
   if (body.errors?.length) {
+    console.error("❌ GraphQL Errors:", body.errors);
     throw new Error(body.errors.map((error) => error.message).join(', '));
   }
+  
   return body.data?.events ?? [];
 }
 
@@ -97,13 +111,17 @@ export async function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {
     .map((event) => {
       const data = parseEventData(event.data);
       if (!data) return null;
+      
+      // Log the parsed data so we can see if the field names match the contract
+      console.log("🔍 Parsed Event Data:", data);
+      
       return {
         id: String(event.transaction_version),
-        datasetTitle: data.title,
-        dateUploaded: formatMicrosecondsToDate(data.upload_time),
-        faculty: data.faculty,
-        researcher: data.researcher,
-        cryptographicReceipt: data.shelby_hash,
+        datasetTitle: data.title || "Unknown Title",
+        dateUploaded: data.upload_time ? formatMicrosecondsToDate(data.upload_time) : "Unknown Date",
+        faculty: data.faculty || "Unknown Faculty",
+        researcher: data.researcher || "Unknown Researcher",
+        cryptographicReceipt: data.shelby_hash || "No Hash",
       };
     })
     .filter((record): record is CitationLedgerRecord => record !== null);

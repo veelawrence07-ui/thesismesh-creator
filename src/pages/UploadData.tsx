@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useWallet } from "@/contexts/WalletContext";
 import { submitDatasetToContract } from "@/services/api";
 import { uploadFileToShelby } from "@/services/shelbyStorage";
+// Ensure you have this function in your services to handle session creation
+import { createShelbySession } from "@/services/shelbySession"; 
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
@@ -15,12 +17,12 @@ export default function UploadData() {
   const [shelbyTxHash, setShelbyTxHash] = useState<string | null>(null);
   const [aptosTxHash, setAptosTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
+  // Added "authorizing" step for the session creation phase
+  const [submitStep, setSubmitStep] = useState<"authorizing" | "uploading" | "awaitingWallet" | null>(null);
 
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
 
-  // NEW: Reference to the hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const preventDefault = (event: DragEvent<HTMLDivElement>) => {
@@ -34,7 +36,6 @@ export default function UploadData() {
     setFile(droppedFile);
   };
 
-  // NEW: Handlers for clicking and selecting files
   const handleAreaClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -49,28 +50,33 @@ export default function UploadData() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!connected) {
+    if (!connected || !walletAddress) {
       setError("Please connect your wallet to log research data to the blockchain.");
+      return;
+    }
+
+    if (!file) {
+      setError("Please select or drop a dataset file before uploading.");
       return;
     }
 
     setShelbyTxHash(null);
     setAptosTxHash(null);
     setError(null);
-    setSubmitStep("uploading");
-
-    if (!file) {
-      setError("Please select or drop a dataset file before uploading.");
-      setSubmitStep(null);
-      return;
-    }
 
     try {
-      const shelbyBlobId = await uploadFileToShelby(file);
+      // STEP 1: Authorize Session (Micropayment Channel)
+      setSubmitStep("authorizing");
+      const session = await createShelbySession(walletAddress);
+
+      // STEP 2: Upload to Shelby Storage using the Session ID
+      setSubmitStep("uploading");
+      const shelbyBlobId = await uploadFileToShelby(file, session.id);
 
       setShelbyTxHash(shelbyBlobId);
+      
+      // STEP 3: Sign the transaction to log metadata to Aptos
       setSubmitStep("awaitingWallet");
-
       const receipt = await submitDatasetToContract(
         datasetTitle,
         facultyDiscipline,
@@ -82,38 +88,34 @@ export default function UploadData() {
       setAptosTxHash(receipt.hash);
       setSubmitStep(null);
 
-      if (walletAddress) {
-        const storageKey = "thesismesh-wallet-uploads";
-        const current = window.localStorage.getItem(storageKey);
-        const parsed = current ? (JSON.parse(current) as Record<string, string[]>) : {};
-        const walletUploads = parsed[walletAddress] ?? [];
+      // Save to local storage for the "My Uploads" filter on Dashboard
+      const storageKey = "thesismesh-wallet-uploads";
+      const current = window.localStorage.getItem(storageKey);
+      const parsed = current ? (JSON.parse(current) as Record<string, string[]>) : {};
+      const walletUploads = parsed[walletAddress] ?? [];
 
-        if (!walletUploads.includes(shelbyBlobId)) {
-          parsed[walletAddress] = [...walletUploads, shelbyBlobId];
-          window.localStorage.setItem(storageKey, JSON.stringify(parsed));
-        }
+      if (!walletUploads.includes(shelbyBlobId)) {
+        parsed[walletAddress] = [...walletUploads, shelbyBlobId];
+        window.localStorage.setItem(storageKey, JSON.stringify(parsed));
       }
 
+      // Reset form
       setDatasetTitle("");
       setFacultyDiscipline("");
       setPrimaryResearcher("");
       setFile(null);
     } catch (err) {
       setSubmitStep(null);
-
       if (err instanceof Error) {
         const message = err.message.toLowerCase();
-
         if (message.includes("user rejected") || message.includes("rejected")) {
-          setError("Transaction rejected in Petra wallet. Please approve the signature to complete logging.");
+          setError("Transaction rejected in wallet. Please approve the signature to complete logging.");
           return;
         }
-
         setError(err.message);
-        return;
+      } else {
+        setError("An unknown error occurred during upload.");
       }
-
-      setError("An unknown error occurred during upload.");
     }
   };
 
@@ -127,7 +129,6 @@ export default function UploadData() {
         </p>
       </div>
 
-      {/* UPDATED: Added onClick and the hidden input */}
       <div
         onClick={handleAreaClick}
         onDrop={onDrop}
@@ -189,14 +190,16 @@ export default function UploadData() {
 
         <Button
           type="submit"
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 w-full"
           disabled={!connected || submitStep !== null}
         >
-          {submitStep === "uploading"
+          {submitStep === "authorizing"
+            ? "Opening Shelbynet Session..."
+            : submitStep === "uploading"
             ? "Uploading file to Shelby Storage..."
             : submitStep === "awaitingWallet"
-              ? "Awaiting Wallet Signature..."
-              : "Upload to Shelby Network"}
+            ? "Awaiting Wallet Signature..."
+            : "Upload to Shelby Network"}
         </Button>
       </form>
 
@@ -211,6 +214,7 @@ export default function UploadData() {
         <Alert className="border-indigo-300 bg-indigo-50">
           <AlertTitle className="text-indigo-800">Upload successful</AlertTitle>
           <AlertDescription className="text-indigo-700">
+            File Hash: <span className="font-mono text-xs block mb-1">{shelbyTxHash}</span>
             Metadata confirmed on Shelbynet: <span className="font-mono text-xs">{aptosTxHash}</span>
           </AlertDescription>
         </Alert>

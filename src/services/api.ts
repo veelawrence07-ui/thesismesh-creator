@@ -3,8 +3,9 @@ import { SHELBYNET_INDEXER_URL } from "@/config/aptos";
 const CONTRACT_ADDRESS =
   "0xda877009fc36736b2a3da44c4b3993ab1c9b47d390146a33e1299994b9738ea9";
 
-// THE FIX: We use a fuzzy search (_like) to find ANYTHING with "Dataset" in the event name
-// This bypasses any typos in the contract address or the exact event name.
+// Load your Geomi Client API Key from the environment variables
+const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
+
 const GET_DATASET_EVENTS_QUERY = `
 query GetDatasetEvents {
   events(
@@ -52,7 +53,13 @@ export interface DashboardMetrics {
 export interface RecentActivityRecord extends CitationLedgerRecord {}
 export interface AuditMessageResponse { message: string }
 
-type TransactionPayload = { data: { function: string; functionArguments: string[] } };
+// standard payload structure for Aptos wallet adapters
+type TransactionPayload = { 
+  data: { 
+    function: string; 
+    functionArguments: string[] 
+  } 
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -82,9 +89,20 @@ function parseEventData(data: DatasetEvent['data']): DatasetEventData | null {
 async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
   console.log("📡 Querying Shelbynet Indexer...");
   
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Inject the API key if it exists
+  if (SHELBY_API_KEY) {
+    headers['Authorization'] = `Bearer ${SHELBY_API_KEY}`;
+  } else {
+    console.warn("⚠️ VITE_SHELBY_API_KEY is missing. Indexer query may be rate-limited or fail.");
+  }
+  
   const response = await fetch(SHELBYNET_INDEXER_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ query: GET_DATASET_EVENTS_QUERY }),
   });
   
@@ -94,7 +112,6 @@ async function fetchDatasetEvents(): Promise<DatasetEvent[]> {
   
   const body = (await response.json()) as GetDatasetEventsResponse;
   
-  // Print the raw truth to the browser console
   console.log("📦 Raw Indexer Data:", body);
   
   if (body.errors?.length) {
@@ -112,7 +129,6 @@ export async function fetchCitationLedger(): Promise<CitationLedgerRecord[]> {
       const data = parseEventData(event.data);
       if (!data) return null;
       
-      // Log the parsed data so we can see if the field names match the contract
       console.log("🔍 Parsed Event Data:", data);
       
       return {

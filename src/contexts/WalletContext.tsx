@@ -1,14 +1,41 @@
 import { AptosWalletAdapterProvider, useWallet as useAptosWallet } from "@aptos-labs/wallet-adapter-react";
-import { Network } from "@aptos-labs/ts-sdk";
+import { aptosDappConfig } from "@/config/aptos";
 import type { ReactNode } from "react";
+
+const LEGACY_NETWORK_NAME = "shelbynet";
+
+function clearLegacyShelbynetWalletState() {
+  if (typeof window === "undefined") return;
+
+  try {
+    const keysToRemove: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key) continue;
+
+      const value = window.localStorage.getItem(key);
+      if (!value) continue;
+
+      const isWalletRelated = /aptos|wallet|petra/i.test(key);
+      const hasLegacyNetwork = value.toLowerCase().includes(LEGACY_NETWORK_NAME);
+      if (isWalletRelated && hasLegacyNetwork) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Ignore storage access errors and continue with the current session.
+  }
+}
+
+clearLegacyShelbynetWalletState();
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <AptosWalletAdapterProvider
-      dappConfig={{
-        network: Network.CUSTOM,
-        fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      }}
+      dappConfig={aptosDappConfig}
       autoConnect
       optInWallets={["Petra"]}
     >

@@ -1,8 +1,22 @@
-import { useWallet as useAdapterWallet } from "@aptos-labs/wallet-adapter-react";
+import { AptosWalletAdapterProvider, useWallet as useAptosWallet } from "@aptos-labs/wallet-adapter-react";
+import { Network } from "@aptos-labs/ts-sdk";
+import type { ReactNode } from "react";
 
-export function useWallet() {
-  return useAdapterWallet();
+export function WalletProvider({ children }: { children: ReactNode }) {
+  return (
+    <AptosWalletAdapterProvider
+      dappConfig={{
+        network: Network.CUSTOM,
+        fullnode: "https://api.shelbynet.shelby.xyz/v1",
+      }}
+      autoConnect
+    >
+      {children}
+    </AptosWalletAdapterProvider>
+  );
 }
+
+export const useWallet = useAptosWallet;
 
 export function shortenWalletAddress(address: string): string {
   if (address.length <= 12) {

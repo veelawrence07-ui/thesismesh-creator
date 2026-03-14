@@ -1,4 +1,4 @@
-import { Network, AccountAddress } from "@aptos-labs/ts-sdk";
+import { AccountAddress } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -11,24 +11,22 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // 1. Give Shelby ALL the flags directly so its internal Aptos builder doesn't crash
+    // 🚨 The absolute minimal, doc-approved configuration.
+    // We remove ALL custom overrides (no aptos, no fullnode, no network flag)
+    // so the SDK falls back to its native ShelbyNet routing seamlessly.
     const shelby = new ShelbyClient({
-      network: Network.CUSTOM, // Fulfills the "Custom endpoints require a network" rule
-      fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       indexer: {
-        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql" // Fulfills the Shelby indexer rule
+        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
       },
       apiKey: SHELBY_API_KEY,
     });
 
-    // 2. Your perfectly formatted AccountAddress payload
+    // Your perfectly formatted signer and transaction payload
     const signer = {
       account: AccountAddress.from(walletAddress),
       signAndSubmitTransaction
     };
 
-    // 3. The exact strict payload structure
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{

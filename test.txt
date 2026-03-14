@@ -1,0 +1,24 @@
+Usage: shelby [options] [command]
+
+CLI tool for preparing, uploading, reading and deleting data (such as files or
+video content) on Shelby
+
+Options:
+  -V, --version                              output the version number
+  -v, --verbose                              Enable verbose logging (default: false)
+  -C, --config-file <path>                   Path to your Shelby CLI config (defaults to ~/.shelby/config.yaml unless config_location_behavior in global config is set to 'walk')
+  -c, --context <name>                       Load endpoints from contexts.<name> (defaults to default_context in config) (default: "shelbynet")
+  -a, --account <name>                       Load signing credentials from accounts.<name> (defaults to default_account in config) (default: "thesismesh")
+  -h, --help                                 display help for command
+
+Commands:
+  init [options]                             Bootstrap your Shelby config via an interactive wizard or flags
+  account                                    Manage signing accounts (addresses & keys)
+  config                                     Manage CLI configuration
+  context                                    Manage network contexts (Shelby RPC & Aptos endpoints)
+  delete [options] [destination]             Delete a blob or folder of blobs from Shelby
+  download [options] [source] [destination]  Download a file or directory from Shelby RPC
+  faucet [options]                           Open the Shelby faucet web page to request tokens
+  localnet                                   Manage Shelby localnet
+  upload [options] [source] [destination]    Upload a file or directory to the shelby RPC in the config.
+  commitment <input> <output>                Compute commitments for a file place into an output JSON file. Intended for debugging and introspection.

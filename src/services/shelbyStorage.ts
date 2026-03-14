@@ -1,4 +1,4 @@
-import { Network } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -11,13 +11,17 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK to upload ${file.name}...`);
 
-    const shelby = new ShelbyClient({
-      network: Network.CUSTOM, 
+    // 1. Build the custom Aptos connection
+    const aptosConfig = new AptosConfig({
+      network: Network.CUSTOM, // 🚨 The magic flag we missed earlier!
       fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      // 🚨 THE FIX: Nesting the URL inside an object under the "endpoint" key
-      indexer: {
-        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
-      },
+      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
+    });
+    const aptos = new Aptos(aptosConfig);
+
+    // 2. Hand the fully configured Aptos client to Shelby
+    const shelby = new ShelbyClient({
+      aptos: aptos,
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       apiKey: SHELBY_API_KEY,
       wallet: {
@@ -26,7 +30,7 @@ export async function uploadFileToShelby(
       }
     });
     
-    // 3. The Magic Command
+    // 3. Upload and trigger the Petra Wallet micropayment
     const uploadResult = await shelby.upload({
       file: file,
       expiration: "30d", 

@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -11,18 +11,20 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK to upload ${file.name}...`);
 
-    // 1. Build the custom Aptos connection
+    // 1. Custom Aptos client (Flat strings, NO network flag)
     const aptosConfig = new AptosConfig({
-      network: Network.CUSTOM, // 🚨 The magic flag we missed earlier!
       fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
+      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql"
     });
     const aptos = new Aptos(aptosConfig);
 
-    // 2. Hand the fully configured Aptos client to Shelby
+    // 2. Shelby client (Indexer MUST be an object here!)
     const shelby = new ShelbyClient({
       aptos: aptos,
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
+      indexer: {
+        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
+      },
       apiKey: SHELBY_API_KEY,
       wallet: {
         address: walletAddress,

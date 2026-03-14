@@ -65,7 +65,8 @@ export default function UploadData() {
     try {
       // STEP 1: Authorize Session (Micropayment Channel)
       setSubmitStep("authorizing");
-      const session = await createShelbySession(walletAddress);
+      // 🚨 FIX: We are now passing the wallet signature function to handle the 402 invoice!
+      const session = await createShelbySession(walletAddress, signAndSubmitTransaction);
 
       // STEP 2: Upload to Shelby Storage using the Session ID
       setSubmitStep("uploading");

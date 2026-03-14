@@ -24,23 +24,30 @@ export async function createShelbySession(
       }),
     });
 
-    // 🚨 THE MAGIC FIX: Handling the Web3 Invoice 🚨
+  // 🚨 THE MAGIC FIX: Handling the Web3 Invoice 🚨
     if (response.status === 402) {
       console.log("🧾 402 Payment Required: Received invoice from ShelbyNet!");
       const invoiceData = await response.json();
       
-      // The server gave us the Aptos transaction payload required to pay for the session.
-      // We ask Petra Wallet to sign and pay it!
+      // Let's look exactly at what the server handed us!
+      console.log("🔍 INVOICE JSON:", invoiceData);
+      
+      // We will try a few common Web3 names for the payload
+      const txData = invoiceData.payload || invoiceData.transactionPayload || invoiceData.payment_transaction || invoiceData.tx;
+
+      if (!txData) {
+        throw new Error("We caught the invoice, but couldn't find the payload! Please check the console log.");
+      }
+
+      // Pass the found payload to the wallet
       const pendingTxn = await signAndSubmitTransaction({
-        data: invoiceData.payload || invoiceData.transactionPayload 
+        data: txData 
       });
 
       console.log("✅ Payment successful! Txn Hash:", pendingTxn.hash);
 
-      // Return the paid session data back to your frontend
       return invoiceData; 
     }
-
     if (!response.ok) {
       throw new Error("SESSION_FAILED");
     }

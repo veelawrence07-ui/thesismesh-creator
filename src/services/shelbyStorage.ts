@@ -1,4 +1,4 @@
-import { AccountAddress } from "@aptos-labs/ts-sdk";
+import { Network, AccountAddress } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -11,33 +11,30 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // 🚨 The absolute minimal, doc-approved configuration.
-    // We remove ALL custom overrides (no aptos, no fullnode, no network flag)
-    // so the SDK falls back to its native ShelbyNet routing seamlessly.
+    // ✅ Official documented config — this is the ONLY supported way
     const shelby = new ShelbyClient({
-      indexer: {
-        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
-      },
+      network: Network.TESTNET,   // ← ShelbyNet prototype is accessed via TESTNET
       apiKey: SHELBY_API_KEY,
+      // NO indexer, NO fullnode, NO rpcEndpoint, NO CUSTOM — nothing else
     });
 
-    // Your perfectly formatted signer and transaction payload
+    // Signer (already fixed in previous steps)
     const signer = {
       account: AccountAddress.from(walletAddress),
       signAndSubmitTransaction
     };
 
+    // Upload (exact documented structure)
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{
         blobName: file.name,
         blobData: file
       }],
-      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000)
+      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) // 30 days
     });
 
-    console.log("✅ SDK Upload Success!", uploadResult);
-
+    console.log("✅ Upload Success!", uploadResult);
     return uploadResult.blobId || uploadResult.hash || uploadResult.id;
 
   } catch (error) {

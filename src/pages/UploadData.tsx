@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useWallet } from "@/contexts/WalletContext";
 import { submitDatasetToContract } from "@/services/api";
 import { uploadFileToShelby } from "@/services/shelbyStorage";
-import { createShelbySession } from "@/services/shelbySession";
+
+// 🚨 Notice we completely deleted the createShelbySession import! We don't need it anymore.
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
@@ -16,7 +17,9 @@ export default function UploadData() {
   const [shelbyTxHash, setShelbyTxHash] = useState<string | null>(null);
   const [aptosTxHash, setAptosTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitStep, setSubmitStep] = useState<"authorizing" | "uploading" | "awaitingWallet" | null>(null);
+  
+  // Removed "authorizing" since the SDK wraps authorization and uploading into one step
+  const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
   const walletAddress = account?.address?.toString() ?? null;
@@ -63,18 +66,17 @@ export default function UploadData() {
     setError(null);
 
     try {
-      // STEP 1: Authorize Session (Micropayment Channell)
-      setSubmitStep("authorizing");
-      // 🚨 FIX: We are now passing the wallet signature function to handle the 402 invoice!
-      const session = await createShelbySession(walletAddress, signAndSubmitTransaction);
-
-      // STEP 2: Upload to Shelby Storage using the Session ID
+      // STEP 1: Upload to Shelby Storage (The SDK handles the micropayment & session!)
       setSubmitStep("uploading");
-      const shelbyBlobId = await uploadFileToShelby(file, session.id);
+      const shelbyBlobId = await uploadFileToShelby(
+        file, 
+        walletAddress, 
+        signAndSubmitTransaction
+      );
 
       setShelbyTxHash(shelbyBlobId);
       
-      // STEP 3: Sign the transaction to log metadata to Aptos
+      // STEP 2: Sign the transaction to log metadata to Aptos
       setSubmitStep("awaitingWallet");
       const receipt = await submitDatasetToContract(
         datasetTitle,
@@ -201,10 +203,8 @@ export default function UploadData() {
           className="bg-indigo-600 hover:bg-indigo-700 w-full"
           disabled={!connected || submitStep !== null}
         >
-          {submitStep === "authorizing"
-            ? "Opening Shelbynet Session..."
-            : submitStep === "uploading"
-            ? "Uploading file to Shelby Storage..."
+          {submitStep === "uploading"
+            ? "Authorizing & Uploading to Shelby..."
             : submitStep === "awaitingWallet"
             ? "Awaiting Wallet Signature..."
             : "Upload to Shelby Network"}

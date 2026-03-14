@@ -1,6 +1,6 @@
 import { Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
 // Import the core browser client from the SDK you installed
-import { ShelbyClient } from "@shelby-protocol/sdk"; 
+import { ShelbyBrowserClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
@@ -19,18 +19,17 @@ export async function uploadFileToShelby(
     });
     const aptos = new Aptos(aptosConfig);
 
-    // 2. Initialize the official Shelby SDK
-    const shelby = new ShelbyClient({
+    //2.
+   const shelby = new ShelbyBrowserClient({
       aptos,
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       apiKey: SHELBY_API_KEY,
-      // We hand the SDK your wallet so it can handle the 402 Micropayment automatically
       wallet: {
         address: walletAddress,
         signAndSubmitTransaction: signAndSubmitTransaction
       }
     });
-
+    
     // 3. The Magic Command: This single function creates the channel, gets the session, 
     // triggers your Petra wallet for the fee, and uploads the file!
     const uploadResult = await shelby.upload({

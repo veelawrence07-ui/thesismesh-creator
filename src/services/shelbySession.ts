@@ -1,6 +1,7 @@
-// Updated to the official testnet URL!
-const SHELBY_API_URL = "https://api.testnet.shelby.xyz/shelby"; 
-// Grab the Client Key you generated on Geomi
+// Updated to the official ShelbyNet URL from the documentation!
+const SHELBY_API_URL = "https://api.shelbynet.shelby.xyz/shelby"; 
+
+// Grabbing the key securely from your .env.local file
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? ""; 
 
 export async function createShelbySession(walletAddress: string) {
@@ -9,7 +10,6 @@ export async function createShelbySession(walletAddress: string) {
       "Content-Type": "application/json",
     };
 
-    // Inject the API key to bypass rate limits and auth walls
     if (SHELBY_API_KEY) {
       headers["Authorization"] = `Bearer ${SHELBY_API_KEY}`;
     } else {

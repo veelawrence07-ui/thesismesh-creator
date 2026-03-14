@@ -1,5 +1,5 @@
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
-import { Network } from "@aptos-labs/ts-sdk";   // ← MUST be imported
+import { Network } from "@aptos-labs/ts-sdk";
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
@@ -11,19 +11,19 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // ✅ ShelbyClient with the correct ShelbyNet network (no custom indexer!)
+    // ✅ Official & simplest config (no indexer, no custom anything)
     const shelby = new ShelbyClient({
-      network: Network.SHELBYNET,     // ← THIS IS THE KEY FIX
+      network: Network.TESTNET,   // ← this is what the docs use for ShelbyNet
       apiKey: SHELBY_API_KEY,
     });
 
-    // Signer for Petra wallet (triggers micropayment popup)
+    // Signer (triggers Petra micropayment popup automatically)
     const signer = {
       account: { address: walletAddress },
       signAndSubmitTransaction
     };
 
-    // Upload with correct params
+    // Upload (correct params)
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{

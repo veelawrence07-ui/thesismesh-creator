@@ -11,28 +11,35 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // ✅ Official ShelbyNet config (uses correct endpoints internally)
+    // 1. We MUST use Network.CUSTOM when providing custom ShelbyNet URLs.
+    // This stops the 401 error AND stops the "require a network" error.
     const shelby = new ShelbyClient({
-      network: Network.SHELBYNET,   // ← THIS IS THE PERMANENT FIX
+      network: Network.CUSTOM,
+      fullnode: "https://api.shelbynet.shelby.xyz/v1",
+      rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
+      indexer: {
+        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
+      },
       apiKey: SHELBY_API_KEY,
     });
 
-    // Correct signer format (matches all docs)
+    // 2. The perfectly formatted signer (fixes the toStringLongWithoutPrefix error)
     const signer = {
-      account: AccountAddress.from(walletAddress),   // ← NOT accountAddress
+      accountAddress: AccountAddress.from(walletAddress),
       signAndSubmitTransaction
     };
 
+    // 3. The strict upload payload
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{
         blobName: file.name,
         blobData: file
       }],
-      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) // 30 days
+      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) 
     });
 
-    console.log("✅ Upload Success!", uploadResult);
+    console.log("✅ SDK Upload Success!", uploadResult);
     return uploadResult.blobId || uploadResult.hash || uploadResult.id;
 
   } catch (error) {

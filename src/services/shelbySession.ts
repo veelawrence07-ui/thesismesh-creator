@@ -4,7 +4,7 @@ const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
 export async function createShelbySession(
   walletAddress: string, 
-  signAndSubmitTransaction: any // 👈 We are passing your wallet right into the function!
+  signAndSubmitTransaction: any
 ) {
   try {
     const headers: Record<string, string> = {
@@ -15,7 +15,6 @@ export async function createShelbySession(
       headers["Authorization"] = `Bearer ${SHELBY_API_KEY}`;
     }
 
-    // 1. Ask the server for the upload session
     const response = await fetch(`${SHELBY_API_URL}/v1/sessions`, {
       method: "POST",
       headers,
@@ -51,4 +50,4 @@ export async function createShelbySession(
     console.error("❌ Shelby Session Error:", error);
     throw error;
   }
-}`````````````````````````````
+}

@@ -11,27 +11,24 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // ✅ Official documented config — this is the ONLY supported way
     const shelby = new ShelbyClient({
-      network: Network.TESTNET,   // ← ShelbyNet prototype is accessed via TESTNET
+      network: Network.TESTNET,
       apiKey: SHELBY_API_KEY,
-      // NO indexer, NO fullnode, NO rpcEndpoint, NO CUSTOM — nothing else
     });
 
-    // Signer (already fixed in previous steps)
+    // 🚨 THE FIX: Renamed 'account' to 'accountAddress'
     const signer = {
-      account: AccountAddress.from(walletAddress),
+      accountAddress: AccountAddress.from(walletAddress),
       signAndSubmitTransaction
     };
 
-    // Upload (exact documented structure)
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{
         blobName: file.name,
         blobData: file
       }],
-      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) // 30 days
+      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) 
     });
 
     console.log("✅ Upload Success!", uploadResult);

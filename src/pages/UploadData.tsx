@@ -63,7 +63,7 @@ export default function UploadData() {
     setError(null);
 
     try {
-      // STEP 1: Authorize Session (Micropayment Channel)
+      // STEP 1: Authorize Session (Micropayment Channell)
       setSubmitStep("authorizing");
       // 🚨 FIX: We are now passing the wallet signature function to handle the 402 invoice!
       const session = await createShelbySession(walletAddress, signAndSubmitTransaction);

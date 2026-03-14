@@ -1,4 +1,4 @@
-import { AccountAddress, Network } from "@aptos-labs/ts-sdk";
+import { AccountAddress } from "@aptos-labs/ts-sdk"; // 🚨 Removed Network entirely
 import { ShelbyClient } from "@shelby-protocol/sdk/browser";
 
 type TransactionPayload = {
@@ -13,8 +13,6 @@ type SignAndSubmitTransaction = (
 ) => Promise<{ hash: string } | Record<string, unknown>>;
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
-const SHELBYNET_FULLNODE = "https://api.shelbynet.shelby.xyz/v1";
-const SHELBYNET_RPC_ENDPOINT = "https://api.shelbynet.shelby.xyz/shelby";
 const SHELBYNET_INDEXER_ENDPOINT = "https://api.shelbynet.shelby.xyz/v1/graphql";
 
 const THIRTY_DAYS_IN_MICROS = 30 * 24 * 60 * 60 * 1_000_000;
@@ -51,10 +49,9 @@ export async function uploadFileToShelby(
     throw new Error("signAndSubmitTransaction must be a function.");
   }
 
+  // 🚨 THE FIX: Absolute minimal config. 
+  // No network flags, no fullnode injections. We let Shelby handle it.
   const shelby = new ShelbyClient({
-    network: Network.CUSTOM,
-    fullnode: SHELBYNET_FULLNODE,
-    rpcEndpoint: SHELBYNET_RPC_ENDPOINT,
     indexer: {
       endpoint: SHELBYNET_INDEXER_ENDPOINT,
     },

@@ -11,12 +11,13 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK to upload ${file.name}...`);
 
-    // 🚨 FIX: Let the Shelby SDK build the Aptos connection itself!
-    // We pass the CUSTOM network flag and URLs directly into its config.
     const shelby = new ShelbyClient({
       network: Network.CUSTOM, 
       fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
+      // 🚨 THE FIX: Nesting the URL inside an object under the "endpoint" key
+      indexer: {
+        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
+      },
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       apiKey: SHELBY_API_KEY,
       wallet: {
@@ -25,15 +26,14 @@ export async function uploadFileToShelby(
       }
     });
     
-    // 3. The Magic Command: This handles the channel, session, and micropayment!
+    // 3. The Magic Command
     const uploadResult = await shelby.upload({
       file: file,
-      expiration: "30d", // Required by ShelbyNet
+      expiration: "30d", 
     });
 
     console.log("✅ SDK Upload Success!", uploadResult);
 
-    // Return the cryptographic blob ID to store on your Thesismesh smart contract
     return uploadResult.blobId || uploadResult.hash;
 
   } catch (error) {

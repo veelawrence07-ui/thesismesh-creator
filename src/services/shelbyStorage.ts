@@ -1,52 +1,50 @@
-// 🚨 FIXED: Now pointing to the official ShelbyNet URL!
-const SHELBY_API_BASE = "https://api.shelbynet.shelby.xyz/shelby";
+import { Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
+// Import the core browser client from the SDK you installed
+import { ShelbyClient } from "@shelby-protocol/sdk"; 
+
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
-export async function uploadFileToShelby(file: File, sessionId: string): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-
+export async function uploadFileToShelby(
+  file: File, 
+  walletAddress: string,
+  signAndSubmitTransaction: any
+): Promise<string> {
   try {
-    console.log(`⬆️ Uploading ${file.name} to Shelby Storage...`);
+    console.log(`⬆️ Initializing SDK to upload ${file.name}...`);
 
-    const headers: Record<string, string> = {
-      "X-Shelby-Session": sessionId,
-      "x-expiration-seconds": "2592000",
-    };
+    // 1. Tell the Aptos SDK to look at ShelbyNet
+    const aptosConfig = new AptosConfig({
+      fullnode: "https://api.shelbynet.shelby.xyz/v1",
+      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
+    });
+    const aptos = new Aptos(aptosConfig);
 
-    if (SHELBY_API_KEY) {
-      headers["Authorization"] = `Bearer ${SHELBY_API_KEY}`;
-    } else {
-      console.warn("⚠️ VITE_SHELBY_API_KEY is missing. Upload request may fail.");
-    }
-
-    const response = await fetch(`${SHELBY_API_BASE}/v1/blobs/upload`, {
-      method: "POST",
-      headers,
-      body: formData,
+    // 2. Initialize the official Shelby SDK
+    const shelby = new ShelbyClient({
+      aptos,
+      rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
+      apiKey: SHELBY_API_KEY,
+      // We hand the SDK your wallet so it can handle the 402 Micropayment automatically
+      wallet: {
+        address: walletAddress,
+        signAndSubmitTransaction: signAndSubmitTransaction
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Shelby Upload Failed: ${errorText || response.statusText}`);
-    }
+    // 3. The Magic Command: This single function creates the channel, gets the session, 
+    // triggers your Petra wallet for the fee, and uploads the file!
+    const uploadResult = await shelby.upload({
+      file: file,
+      expiration: "30d", // Required by ShelbyNet
+    });
 
-    const data = await response.json();
-    console.log("✅ Shelby Upload Success:", data);
+    console.log("✅ SDK Upload Success!", uploadResult);
 
-    const finalHash = data.blobId || data.hash || data.blobName;
+    // Return the cryptographic blob ID to store on your Thesismesh smart contract
+    return uploadResult.blobId || uploadResult.hash;
 
-    if (!finalHash) {
-      throw new Error("Upload succeeded but no Blob ID was returned from Shelby.");
-    }
-
-    return finalHash;
   } catch (error) {
-    console.error("❌ Shelby Storage Error:", error);
+    console.error("❌ Shelby SDK Error:", error);
     throw error;
   }
-}
-
-export function getShelbyBlobUrl(accountAddress: string, blobName: string): string {
-  return `${SHELBY_API_BASE}/v1/blobs/${accountAddress}/${blobName}`;
 }

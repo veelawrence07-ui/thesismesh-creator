@@ -1,6 +1,6 @@
 import { Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
-// Import the core browser client from the SDK you installed
-import { ShelbyBrowserClient } from "@shelby-protocol/sdk/browser"; 
+// 🚨 FIX: The path stays /browser, but the imported class is just ShelbyClient!
+import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 
@@ -19,8 +19,9 @@ export async function uploadFileToShelby(
     });
     const aptos = new Aptos(aptosConfig);
 
-    //2.
-   const shelby = new ShelbyBrowserClient({
+    // 2. Initialize the official Shelby SDK
+    // 🚨 FIX: Using the correct class name here too!
+    const shelby = new ShelbyClient({
       aptos,
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       apiKey: SHELBY_API_KEY,

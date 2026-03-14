@@ -1,49 +1,100 @@
-import { Network, AccountAddress } from "@aptos-labs/ts-sdk";
-import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
+import { AccountAddress, Network } from "@aptos-labs/ts-sdk";
+import { ShelbyClient } from "@shelby-protocol/sdk/browser";
+
+type TransactionPayload = {
+  data: {
+    function: string;
+    functionArguments: unknown[];
+  };
+};
+
+type SignAndSubmitTransaction = (
+  transaction: TransactionPayload,
+) => Promise<{ hash: string } | Record<string, unknown>>;
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
+const SHELBYNET_FULLNODE = "https://api.shelbynet.shelby.xyz/v1";
+const SHELBYNET_RPC_ENDPOINT = "https://api.shelbynet.shelby.xyz/shelby";
+const SHELBYNET_INDEXER_ENDPOINT = "https://api.shelbynet.shelby.xyz/v1/graphql";
+const THIRTY_DAYS_IN_MICROS = 30 * 24 * 60 * 60 * 1_000_000;
+
+function buildShelbyClient(network: Network): ShelbyClient {
+  return new ShelbyClient({
+    network,
+    fullnode: SHELBYNET_FULLNODE,
+    rpcEndpoint: SHELBYNET_RPC_ENDPOINT,
+    indexer: {
+      endpoint: SHELBYNET_INDEXER_ENDPOINT,
+    },
+    apiKey: SHELBY_API_KEY,
+  });
+}
+
+function createShelbyClient(): ShelbyClient {
+  try {
+    return buildShelbyClient(Network.CUSTOM);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const hasIndexerValidationError =
+      message.includes("indexer") && (message.includes("endpoint") || message.includes("network"));
+
+    if (!hasIndexerValidationError) {
+      throw error;
+    }
+
+    return buildShelbyClient(Network.MAINNET);
+  }
+}
+
+function resolveUploadId(uploadResult: unknown): string {
+  if (!uploadResult || typeof uploadResult !== "object") {
+    throw new Error("Shelby upload returned an invalid response payload.");
+  }
+
+  const result = uploadResult as {
+    blobId?: unknown;
+    hash?: unknown;
+    id?: unknown;
+  };
+
+  const candidate = result.blobId ?? result.hash ?? result.id;
+  if (typeof candidate !== "string" || candidate.length === 0) {
+    throw new Error("Shelby upload did not return blobId/hash/id.");
+  }
+
+  return candidate;
+}
 
 export async function uploadFileToShelby(
-  file: File, 
+  file: File,
   walletAddress: string,
-  signAndSubmitTransaction: any
+  signAndSubmitTransaction: SignAndSubmitTransaction,
 ): Promise<string> {
-  try {
-    console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
-
-    // 1. We MUST use Network.CUSTOM when providing custom ShelbyNet URLs.
-    // This stops the 401 error AND stops the "require a network" error.
-    const shelby = new ShelbyClient({
-      network: Network.CUSTOM,
-      fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
-      indexer: {
-        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
-      },
-      apiKey: SHELBY_API_KEY,
-    });
-
-    // 2. The perfectly formatted signer (fixes the toStringLongWithoutPrefix error)
-    const signer = {
-      accountAddress: AccountAddress.from(walletAddress),
-      signAndSubmitTransaction
-    };
-
-    // 3. The strict upload payload
-    const uploadResult = await shelby.upload({
-      signer,
-      blobs: [{
-        blobName: file.name,
-        blobData: file
-      }],
-      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) 
-    });
-
-    console.log("✅ SDK Upload Success!", uploadResult);
-    return uploadResult.blobId || uploadResult.hash || uploadResult.id;
-
-  } catch (error) {
-    console.error("❌ Shelby SDK Error:", error);
-    throw error;
+  if (!walletAddress || typeof walletAddress !== "string") {
+    throw new Error("A valid wallet address string is required for Shelby uploads.");
   }
+
+  if (typeof signAndSubmitTransaction !== "function") {
+    throw new Error("signAndSubmitTransaction must be a function.");
+  }
+
+  const shelby = createShelbyClient();
+
+  const signer = {
+    accountAddress: AccountAddress.from(walletAddress),
+    signAndSubmitTransaction,
+  };
+
+  const uploadResult = await shelby.upload({
+    signer,
+    blobs: [
+      {
+        blobName: file.name,
+        blobData: file,
+      },
+    ],
+    expirationMicros: Date.now() * 1000 + THIRTY_DAYS_IN_MICROS,
+  });
+
+  return resolveUploadId(uploadResult);
 }

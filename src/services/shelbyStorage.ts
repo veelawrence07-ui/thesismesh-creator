@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig, Network, AccountAddress } from "@aptos-labs/ts-sdk";
+import { Network, AccountAddress } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -11,41 +11,28 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK for ${file.name} on ShelbyNet...`);
 
-    // 1. OVERRIDE TESTNET: We keep the Testnet flag but force the URLs to ShelbyNet
-    // so your Geomi API key doesn't get rejected by Aptos Labs.
-    const aptosConfig = new AptosConfig({
-      network: Network.TESTNET,
-      fullnode: "https://api.shelbynet.shelby.xyz/v1",
-      indexer: "https://api.shelbynet.shelby.xyz/v1/graphql"
-    });
-    const aptos = new Aptos(aptosConfig);
-
-    // 2. Pass the overridden Aptos client into Shelby
+    // ✅ Official ShelbyNet config (uses correct endpoints internally)
     const shelby = new ShelbyClient({
-      aptos: aptos,
+      network: Network.SHELBYNET,   // ← THIS IS THE PERMANENT FIX
       apiKey: SHELBY_API_KEY,
-      indexer: {
-        endpoint: "https://api.shelbynet.shelby.xyz/v1/graphql"
-      }
     });
 
-    // 3. Your perfectly formatted signer
+    // Correct signer format (matches all docs)
     const signer = {
-      accountAddress: AccountAddress.from(walletAddress),
+      account: AccountAddress.from(walletAddress),   // ← NOT accountAddress
       signAndSubmitTransaction
     };
 
-    // 4. The strict upload payload
     const uploadResult = await shelby.upload({
       signer,
       blobs: [{
         blobName: file.name,
         blobData: file
       }],
-      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) 
+      expirationMicros: Date.now() * 1000 + (30 * 24 * 60 * 60 * 1_000_000) // 30 days
     });
 
-    console.log("✅ SDK Upload Success!", uploadResult);
+    console.log("✅ Upload Success!", uploadResult);
     return uploadResult.blobId || uploadResult.hash || uploadResult.id;
 
   } catch (error) {

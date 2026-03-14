@@ -16,8 +16,35 @@ const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
 const SHELBYNET_FULLNODE = "https://api.shelbynet.shelby.xyz/v1";
 const SHELBYNET_RPC_ENDPOINT = "https://api.shelbynet.shelby.xyz/shelby";
 const SHELBYNET_INDEXER_ENDPOINT = "https://api.shelbynet.shelby.xyz/v1/graphql";
-
 const THIRTY_DAYS_IN_MICROS = 30 * 24 * 60 * 60 * 1_000_000;
+
+function buildShelbyClient(network: Network): ShelbyClient {
+  return new ShelbyClient({
+    network,
+    fullnode: SHELBYNET_FULLNODE,
+    rpcEndpoint: SHELBYNET_RPC_ENDPOINT,
+    indexer: {
+      endpoint: SHELBYNET_INDEXER_ENDPOINT,
+    },
+    apiKey: SHELBY_API_KEY,
+  });
+}
+
+function createShelbyClient(): ShelbyClient {
+  try {
+    return buildShelbyClient(Network.CUSTOM);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const hasIndexerValidationError =
+      message.includes("indexer") && (message.includes("endpoint") || message.includes("network"));
+
+    if (!hasIndexerValidationError) {
+      throw error;
+    }
+
+    return buildShelbyClient(Network.MAINNET);
+  }
+}
 
 function resolveUploadId(uploadResult: unknown): string {
   if (!uploadResult || typeof uploadResult !== "object") {
@@ -51,15 +78,7 @@ export async function uploadFileToShelby(
     throw new Error("signAndSubmitTransaction must be a function.");
   }
 
-  const shelby = new ShelbyClient({
-    network: Network.CUSTOM,
-    fullnode: SHELBYNET_FULLNODE,
-    rpcEndpoint: SHELBYNET_RPC_ENDPOINT,
-    indexer: {
-      endpoint: SHELBYNET_INDEXER_ENDPOINT,
-    },
-    apiKey: SHELBY_API_KEY,
-  });
+  const shelby = createShelbyClient();
 
   const signer = {
     accountAddress: AccountAddress.from(walletAddress),

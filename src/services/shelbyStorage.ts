@@ -1,5 +1,4 @@
-// 🚨 FIX: Added 'Network' to the import list!
-import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+import { Network } from "@aptos-labs/ts-sdk";
 import { ShelbyClient } from "@shelby-protocol/sdk/browser"; 
 
 const SHELBY_API_KEY = import.meta.env.VITE_SHELBY_API_KEY ?? "";
@@ -12,18 +11,12 @@ export async function uploadFileToShelby(
   try {
     console.log(`⬆️ Initializing SDK to upload ${file.name}...`);
 
-    // 1. Tell the Aptos SDK to look at ShelbyNet
-    const aptosConfig = new AptosConfig({
-      // 🚨 FIX: Explicitly telling Aptos this is a custom network
+    // 🚨 FIX: Let the Shelby SDK build the Aptos connection itself!
+    // We pass the CUSTOM network flag and URLs directly into its config.
+    const shelby = new ShelbyClient({
       network: Network.CUSTOM, 
       fullnode: "https://api.shelbynet.shelby.xyz/v1",
       indexer: "https://api.shelbynet.shelby.xyz/v1/graphql",
-    });
-    const aptos = new Aptos(aptosConfig);
-
-    // 2. Initialize the official Shelby SDK
-    const shelby = new ShelbyClient({
-      aptos,
       rpcEndpoint: "https://api.shelbynet.shelby.xyz/shelby",
       apiKey: SHELBY_API_KEY,
       wallet: {
@@ -32,8 +25,7 @@ export async function uploadFileToShelby(
       }
     });
     
-    // 3. The Magic Command: This single function creates the channel, gets the session, 
-    // triggers your Petra wallet for the fee, and uploads the file!
+    // 3. The Magic Command: This handles the channel, session, and micropayment!
     const uploadResult = await shelby.upload({
       file: file,
       expiration: "30d", // Required by ShelbyNet

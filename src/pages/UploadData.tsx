@@ -5,20 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@/contexts/WalletContext";
 import { submitDatasetToContract } from "@/services/api";
-import { uploadFileToShelby } from "@/services/shelbyStorage";
-
-// 🚨 Notice we completely deleted the createShelbySession import! We don't need it anymore.
+import { uploadFileToWalrus } from "@/services/walrusStorage";
 
 export default function UploadData() {
   const [file, setFile] = useState<File | null>(null);
   const [datasetTitle, setDatasetTitle] = useState("");
   const [facultyDiscipline, setFacultyDiscipline] = useState("");
   const [primaryResearcher, setPrimaryResearcher] = useState("");
-  const [shelbyTxHash, setShelbyTxHash] = useState<string | null>(null);
+  const [walrusBlobId, setWalrusBlobId] = useState<string | null>(null);
   const [aptosTxHash, setAptosTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  // Removed "authorizing" since the SDK wraps authorization and uploading into one step
   const [submitStep, setSubmitStep] = useState<"uploading" | "awaitingWallet" | null>(null);
 
   const { connected, account, network, signAndSubmitTransaction } = useWallet();
@@ -61,20 +57,16 @@ export default function UploadData() {
       return;
     }
 
-    setShelbyTxHash(null);
+    setWalrusBlobId(null);
     setAptosTxHash(null);
     setError(null);
 
     try {
-      // STEP 1: Upload to Shelby Storage (The SDK handles the micropayment & session!)
+      // STEP 1: Upload file to Walrus via HTTP publisher
       setSubmitStep("uploading");
-      const shelbyBlobId = await uploadFileToShelby(
-        file, 
-        walletAddress, 
-        signAndSubmitTransaction
-      );
+      const walrusBlobId = await uploadFileToWalrus(file);
 
-      setShelbyTxHash(shelbyBlobId);
+      setWalrusBlobId(walrusBlobId);
       
       // STEP 2: Sign the transaction to log metadata to Aptos
       setSubmitStep("awaitingWallet");
@@ -82,7 +74,7 @@ export default function UploadData() {
         datasetTitle,
         facultyDiscipline,
         primaryResearcher,
-        shelbyBlobId,
+        walrusBlobId,
         signAndSubmitTransaction,
       );
 
@@ -95,8 +87,8 @@ export default function UploadData() {
       const parsed = current ? (JSON.parse(current) as Record<string, string[]>) : {};
       const walletUploads = parsed[walletAddress] ?? [];
 
-      if (!walletUploads.includes(shelbyBlobId)) {
-        parsed[walletAddress] = [...walletUploads, shelbyBlobId];
+      if (!walletUploads.includes(walrusBlobId)) {
+        parsed[walletAddress] = [...walletUploads, walrusBlobId];
         window.localStorage.setItem(storageKey, JSON.stringify(parsed));
       }
 
@@ -111,15 +103,11 @@ export default function UploadData() {
       let errorMessage = "An unknown error occurred during upload.";
       
       if (err instanceof Error) {
-        if (err.message === "INSUFFICIENT_FUNDS") {
-           errorMessage = "Your Shelbynet storage channel is empty. Please visit the Shelbynet Dashboard or Faucet to deposit ShelbyUSD, then try again.";
+        const lowerMsg = err.message.toLowerCase();
+        if (lowerMsg.includes("user rejected") || lowerMsg.includes("rejected")) {
+          errorMessage = "Transaction rejected in wallet. Please approve the signature to complete logging.";
         } else {
-           const lowerMsg = err.message.toLowerCase();
-           if (lowerMsg.includes("user rejected") || lowerMsg.includes("rejected")) {
-             errorMessage = "Transaction rejected in wallet. Please approve the signature to complete logging.";
-           } else {
-             errorMessage = err.message;
-           }
+          errorMessage = err.message;
         }
       } else if (typeof err === "string") {
         errorMessage = err;
@@ -133,7 +121,7 @@ export default function UploadData() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Upload Data</h2>
-        <p className="text-sm text-slate-600">Ingest new research datasets into the Shelby Network.</p>
+        <p className="text-sm text-slate-600">Ingest new research datasets into Walrus Public Testnet storage.</p>
         <p className="mt-1 text-xs text-slate-500">
           Wallet: {connected && walletAddress ? walletAddress : "Disconnected"} · Network: {network?.name ?? "Unknown"}
         </p>
@@ -204,10 +192,10 @@ export default function UploadData() {
           disabled={!connected || submitStep !== null}
         >
           {submitStep === "uploading"
-            ? "Authorizing & Uploading to Shelby..."
+            ? "Uploading to Walrus..."
             : submitStep === "awaitingWallet"
             ? "Awaiting Wallet Signature..."
-            : "Upload to Shelby Network"}
+            : "Upload to Walrus Network"}
         </Button>
       </form>
 
@@ -218,12 +206,12 @@ export default function UploadData() {
         </Alert>
       )}
 
-      {shelbyTxHash && aptosTxHash && (
+      {walrusBlobId && aptosTxHash && (
         <Alert className="border-indigo-300 bg-indigo-50">
           <AlertTitle className="text-indigo-800">Upload successful</AlertTitle>
           <AlertDescription className="text-indigo-700">
-            File Hash: <span className="font-mono text-xs block mb-1">{shelbyTxHash}</span>
-            Metadata confirmed on Shelbynet: <span className="font-mono text-xs">{aptosTxHash}</span>
+            Walrus Blob ID: <span className="font-mono text-xs block mb-1">{walrusBlobId}</span>
+            Metadata confirmed on Aptos: <span className="font-mono text-xs">{aptosTxHash}</span>
           </AlertDescription>
         </Alert>
       )}
